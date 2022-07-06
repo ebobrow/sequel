@@ -7,10 +7,12 @@ use std::{
 use bytes::Bytes;
 use command::Command;
 use connection::Connection;
+use frame::Frame;
 use tokio::net::{TcpListener, TcpStream};
 
 mod command;
 mod connection;
+mod frame;
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T> = std::result::Result<T, Error>;
@@ -39,18 +41,18 @@ async fn main() -> io::Result<()> {
 async fn process(socket: TcpStream, db: Db) {
     let mut connection = Connection::new(socket);
     while let Some(frame) = connection.read_frame().await.unwrap() {
-        let response = match frame {
+        let response = match Command::from_frame(frame).unwrap() {
             Command::Set(key, val) => {
                 let mut db = db.lock().unwrap();
                 db.insert(key, val);
-                Bytes::copy_from_slice("OK".as_bytes())
+                Frame::String("OK".to_string())
             }
             Command::Get(key) => {
                 let db = db.lock().unwrap();
                 if let Some(value) = db.get(&key) {
-                    value.clone()
+                    Frame::Bulk(value.clone())
                 } else {
-                    Bytes::copy_from_slice("NULL".as_bytes())
+                    Frame::Nil
                 }
             }
         };
