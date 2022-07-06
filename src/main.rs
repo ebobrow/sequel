@@ -5,9 +5,11 @@ use std::{
 };
 
 use bytes::Bytes;
-use connection::{Command, Connection};
+use command::Command;
+use connection::Connection;
 use tokio::net::{TcpListener, TcpStream};
 
+mod command;
 mod connection;
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
