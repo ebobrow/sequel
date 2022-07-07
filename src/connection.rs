@@ -58,7 +58,7 @@ impl Connection {
         match frame {
             Frame::String(val) => self.stream.write_all(val.as_bytes()).await?,
             Frame::Bulk(bytes) => self.stream.write_all(bytes).await?,
-            Frame::Nil => self.stream.write_all(b"$-1").await?,
+            Frame::Null => self.stream.write_all(b"$-1").await?,
         };
         self.stream.write_all(b"\r\n").await?;
         self.stream.flush().await

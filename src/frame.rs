@@ -6,7 +6,7 @@ pub enum Frame {
     String(String),
     Bulk(Bytes),
     // Array(Vec<Frame>),
-    Nil,
+    Null,
 }
 
 impl Frame {
