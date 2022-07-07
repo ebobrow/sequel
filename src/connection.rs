@@ -56,13 +56,25 @@ impl Connection {
 
     pub async fn write_frame(&mut self, frame: &Frame) -> io::Result<()> {
         match frame {
+            Frame::Array(arr) => {
+                for el in arr {
+                    self.write_val(el).await?;
+                    // self.stream.write_all(b"\r\n").await?;
+                }
+            }
+            _ => self.write_val(frame).await?,
+        };
+        // self.stream.write_all(b"\r\n").await?;
+        self.stream.flush().await
+    }
+
+    async fn write_val(&mut self, frame: &Frame) -> io::Result<()> {
+        match frame {
             Frame::String(val) => self.stream.write_all(val.as_bytes()).await?,
             Frame::Bulk(bytes) => self.stream.write_all(bytes).await?,
             Frame::Null => self.stream.write_all(b"$-1").await?,
+            Frame::Array(_) => panic!(),
         };
-        self.stream.write_all(b"\r\n").await?;
-        self.stream.flush().await
-        // self.stream.write_all(frame).await?;
-        // self.stream.flush().await
+        self.stream.write_all(b"\r\n").await
     }
 }

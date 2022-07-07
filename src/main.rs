@@ -30,8 +30,8 @@ async fn main() -> io::Result<()> {
     let db = Arc::new(Mutex::new(HashMap::from([(
         String::from("people"),
         BTreeMap::from([
-            (String::from("Elliot"), Bytes::from_static(b"16")),
-            (String::from("Joe"), Bytes::from_static(b"69")),
+            (String::from("Elliot"), Bytes::from_static(b"Elliot 16")),
+            (String::from("Joe"), Bytes::from_static(b"Joe 69")),
         ]),
     )])));
 
@@ -60,16 +60,11 @@ async fn process(socket: TcpStream, db: Db) {
                 if let Some(table) = db.get(&table) {
                     match &key[..] {
                         "*" => {
-                            // TODO: array type?
-                            let mut ret = String::new();
-                            for (key, val) in table {
-                                ret.push_str(&format!("{} {:?}\n", key, val)[..]);
-                            }
-                            Frame::String(ret)
+                            Frame::Array(table.values().map(|v| Frame::Bulk(v.clone())).collect())
                         }
                         _ => {
-                            if let Some((k, v)) = table.iter().find(|(k, _)| **k == key) {
-                                Frame::String(format!("{} {:?}", k, v))
+                            if let Some((_, v)) = table.iter().find(|(k, _)| **k == key) {
+                                Frame::Bulk(v.clone())
                             } else {
                                 Frame::Null
                             }

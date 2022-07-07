@@ -5,7 +5,7 @@ use bytes::{Buf, Bytes};
 pub enum Frame {
     String(String),
     Bulk(Bytes),
-    // Array(Vec<Frame>),
+    Array(Vec<Frame>),
     Null,
 }
 
