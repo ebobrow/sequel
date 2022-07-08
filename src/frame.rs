@@ -20,10 +20,10 @@ impl Frame {
 
     pub fn parse(src: &mut Cursor<&[u8]>) -> Result<Frame, Error> {
         // for now
-        // Ok(Frame::Bulk(Bytes::copy_from_slice(get_line(src)?)))
-        Ok(Frame::String(
-            String::from_utf8(get_line(src)?.to_vec()).unwrap(),
-        ))
+        Ok(Frame::Bulk(Bytes::copy_from_slice(get_line(src)?)))
+        // Ok(Frame::String(
+        //     String::from_utf8(get_line(src)?.to_vec()).unwrap(),
+        // ))
     }
 }
 
