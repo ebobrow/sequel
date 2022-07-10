@@ -1,13 +1,18 @@
 use bytes::Bytes;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     Star,
+    LeftParen,
+    RightParen,
+    Comma,
 
     // Should these all be stored as `Token`s or like a standard library or something
     Insert,
     Select,
     From,
+    Into,
+    Values,
 
     Identifier,
     Number,
@@ -16,7 +21,7 @@ pub enum TokenType {
     EOF,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 // TODO: needed?
 pub enum Literal {
     String(String),
@@ -24,7 +29,7 @@ pub enum Literal {
     Null,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token {
     ty: TokenType,
     // TODO: Bytes or String? Or &[u8] or Vec<u8>?
@@ -39,5 +44,13 @@ impl Token {
             lexeme,
             literal,
         }
+    }
+
+    pub fn ty(&self) -> &TokenType {
+        &self.ty
+    }
+
+    pub fn literal(&self) -> &Literal {
+        &self.literal
     }
 }

@@ -7,6 +7,8 @@ static KEYWORDS: phf::Map<&'static [u8], TokenType> = phf_map! {
     b"INSERT" => TokenType::Insert,
     b"SELECT" => TokenType::Select,
     b"FROM" => TokenType::From,
+    b"INTO" => TokenType::Into,
+    b"VALUES" => TokenType::Values,
 };
 
 pub struct Scanner {
@@ -43,6 +45,9 @@ impl Scanner {
         match self.advance() {
             b'*' => self.add_token(TokenType::Star, Literal::Null),
             b'"' => self.string(),
+            b'(' => self.add_token(TokenType::LeftParen, Literal::Null),
+            b')' => self.add_token(TokenType::RightParen, Literal::Null),
+            b',' => self.add_token(TokenType::Comma, Literal::Null),
             b' ' => {}
             c => {
                 if c.is_ascii_digit() {
