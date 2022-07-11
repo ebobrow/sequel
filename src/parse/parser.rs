@@ -5,7 +5,7 @@ use super::{
     token::{Literal, Token, TokenType},
 };
 
-enum Error {
+pub enum ParseError {
     Unexpected {
         expected: Vec<TokenType>,
         got: Token,
@@ -14,7 +14,7 @@ enum Error {
     Internal,
 }
 
-impl Debug for Error {
+impl Debug for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Unexpected { expected, got } => {
@@ -30,6 +30,8 @@ impl Debug for Error {
     }
 }
 
+pub type ParseResult<T> = Result<T, ParseError>;
+
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
@@ -40,29 +42,23 @@ impl Parser {
         Parser { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Option<Expr> {
-        match self.command() {
-            Ok(expr) => Some(expr),
-            Err(e) => {
-                eprintln!("Error:\n{:?}", e);
-                None
-            }
-        }
+    pub fn parse(&mut self) -> ParseResult<Expr> {
+        self.command()
     }
 
-    fn command(&mut self) -> Result<Expr, Error> {
+    fn command(&mut self) -> ParseResult<Expr> {
         let cur = self.advance()?;
         match cur.ty() {
             TokenType::Insert => self.insert(),
             TokenType::Select => self.select(),
-            _ => Err(Error::Unexpected {
+            _ => Err(ParseError::Unexpected {
                 expected: vec![TokenType::Insert, TokenType::Select],
                 got: cur.clone(),
             }),
         }
     }
 
-    fn insert(&mut self) -> Result<Expr, Error> {
+    fn insert(&mut self) -> ParseResult<Expr> {
         self.consume(&TokenType::Into)?;
         let table = self.consume(&TokenType::Identifier)?.clone();
         self.consume(&TokenType::LeftParen)?;
@@ -77,14 +73,14 @@ impl Parser {
         })
     }
 
-    fn select(&mut self) -> Result<Expr, Error> {
+    fn select(&mut self) -> ParseResult<Expr> {
         let key = self.key()?;
         self.consume(&TokenType::From)?;
         let table = self.consume(&TokenType::Identifier)?.clone();
         Ok(Expr::Select { key, table })
     }
 
-    fn key(&mut self) -> Result<Key, Error> {
+    fn key(&mut self) -> ParseResult<Key> {
         if self.peek()?.ty() == &TokenType::Star {
             self.advance()?;
             Ok(Key::Glob)
@@ -98,7 +94,7 @@ impl Parser {
         }
     }
 
-    fn values(&mut self) -> Result<Vec<Literal>, Error> {
+    fn values(&mut self) -> ParseResult<Vec<Literal>> {
         self.consume(&TokenType::LeftParen)?;
         let first = self.literal()?;
         let mut values = vec![first];
@@ -109,43 +105,45 @@ impl Parser {
         Ok(values)
     }
 
-    fn literal(&mut self) -> Result<Literal, Error> {
+    fn literal(&mut self) -> ParseResult<Literal> {
         let tok = self.advance()?;
         match tok.ty() {
             TokenType::Number => Ok(tok.literal().clone()),
             TokenType::String => Ok(tok.literal().clone()),
-            _ => Err(Error::Unexpected {
+            _ => Err(ParseError::Unexpected {
                 expected: vec![TokenType::Number, TokenType::String],
                 got: tok.clone(),
             }),
         }
     }
 
-    fn peek(&self) -> Result<&Token, Error> {
-        self.tokens.get(self.current).ok_or(Error::UnexpectedEnd)
+    fn peek(&self) -> ParseResult<&Token> {
+        self.tokens
+            .get(self.current)
+            .ok_or(ParseError::UnexpectedEnd)
     }
 
-    fn previous(&self) -> Result<&Token, Error> {
+    fn previous(&self) -> ParseResult<&Token> {
         if self.current == 0 {
-            Err(Error::Internal)
+            Err(ParseError::Internal)
         } else {
             self.tokens
                 .get(self.current - 1)
-                .ok_or(Error::UnexpectedEnd)
+                .ok_or(ParseError::UnexpectedEnd)
         }
     }
 
-    fn advance(&mut self) -> Result<&Token, Error> {
+    fn advance(&mut self) -> ParseResult<&Token> {
         self.current += 1;
         self.previous()
     }
 
-    fn consume(&mut self, ty: &TokenType) -> Result<&Token, Error> {
+    fn consume(&mut self, ty: &TokenType) -> ParseResult<&Token> {
         let next = self.peek()?;
         if next.ty() == ty {
             self.advance()
         } else {
-            Err(Error::Unexpected {
+            Err(ParseError::Unexpected {
                 expected: vec![ty.clone()],
                 got: next.clone(),
             })

@@ -22,7 +22,6 @@ impl Connection {
     }
 
     // TODO: anyhow or something
-    // TODO: actual frames
     pub async fn read_frame(&mut self) -> crate::Result<Option<Frame>> {
         loop {
             if let Some(frame) = self.parse_frame()? {
@@ -59,18 +58,19 @@ impl Connection {
             Frame::Array(arr) => {
                 for el in arr {
                     self.write_val(el).await?;
-                    // self.stream.write_all(b"\r\n").await?;
                 }
             }
             _ => self.write_val(frame).await?,
         };
-        // self.stream.write_all(b"\r\n").await?;
         self.stream.flush().await
     }
 
     async fn write_val(&mut self, frame: &Frame) -> io::Result<()> {
         match frame {
-            Frame::String(val) => self.stream.write_all(val.as_bytes()).await?,
+            Frame::Error(e) => {
+                eprintln!("{}", e);
+                self.stream.write_all(e.as_bytes()).await?
+            }
             Frame::Bulk(bytes) => self.stream.write_all(bytes).await?,
             Frame::Null => self.stream.write_all(b"$-1").await?,
             Frame::Array(_) => panic!(),

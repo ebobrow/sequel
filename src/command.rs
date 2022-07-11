@@ -1,6 +1,9 @@
 use bytes::Bytes;
 
-use crate::{frame::Frame, parse};
+use crate::{
+    frame::Frame,
+    parse::{self, ParseError, ParseResult},
+};
 
 pub enum Command {
     Select { key: String, table: String },
@@ -12,7 +15,7 @@ pub enum Command {
 }
 
 impl Command {
-    pub fn from_frame(frame: Frame) -> Option<Command> {
+    pub fn from_frame(frame: Frame) -> ParseResult<Command> {
         // TODO: array?
         // TODO: full parser: tokenizer, etc. etc..
         if let Frame::Bulk(stream) = frame {
@@ -29,14 +32,18 @@ impl Command {
             //     }
             //     _ => None,
             // }
-            parse::parse(stream);
-            // TODO
-            Some(Command::Select {
-                key: "*".to_string(),
-                table: "people".to_string(),
-            })
+            match parse::parse(stream) {
+                Ok(_) => {
+                    // TODO
+                    Ok(Command::Select {
+                        key: "*".to_string(),
+                        table: "people".to_string(),
+                    })
+                }
+                Err(e) => Err(e),
+            }
         } else {
-            None
+            Err(ParseError::Internal)
         }
     }
 }

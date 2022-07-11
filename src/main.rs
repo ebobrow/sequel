@@ -15,6 +15,7 @@ mod connection;
 mod frame;
 mod parse;
 
+// TODO: I don't like this
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -50,13 +51,13 @@ async fn main() -> io::Result<()> {
 async fn process(socket: TcpStream, db: Db) {
     let mut connection = Connection::new(socket);
     while let Some(frame) = connection.read_frame().await.unwrap() {
-        let response = match Command::from_frame(frame).unwrap() {
+        let response = match Command::from_frame(frame) {
             // Command::Set(key, val) => {
             //     let mut db = db.lock().unwrap();
             //     db.insert(key, val);
             //     Frame::String("OK".to_string())
             // }
-            Command::Select { key, table } => {
+            Ok(Command::Select { key, table }) => {
                 let db = db.lock().unwrap();
                 if let Some(table) = db.get(&table) {
                     match &key[..] {
@@ -76,6 +77,7 @@ async fn process(socket: TcpStream, db: Db) {
                     Frame::Null
                 }
             }
+            Err(e) => Frame::Error(format!("Error:\n{:?}", e)),
         };
         connection.write_frame(&response).await.unwrap();
     }

@@ -3,9 +3,9 @@ use std::io::Cursor;
 use bytes::{Buf, Bytes};
 
 pub enum Frame {
-    String(String),
     Bulk(Bytes),
     Array(Vec<Frame>),
+    Error(String),
     Null,
 }
 
@@ -57,6 +57,7 @@ fn get_line<'a>(src: &mut Cursor<&'a [u8]>) -> Result<&'a [u8], Error> {
     Err(Error::Incomplete)
 }
 
+// TODO: I don't like this
 #[derive(Debug)]
 pub enum Error {
     Incomplete,
