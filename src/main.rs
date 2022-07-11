@@ -73,8 +73,7 @@ async fn process(socket: TcpStream, db: Db) {
                         }
                     }
                 } else {
-                    // TODO: Frame::Error?
-                    Frame::Null
+                    Frame::Error(format!("Table \"{}\" not found", table))
                 }
             }
             Err(e) => Frame::Error(format!("Error:\n{:?}", e)),

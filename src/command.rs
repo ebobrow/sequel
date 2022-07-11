@@ -1,5 +1,3 @@
-use bytes::Bytes;
-
 use crate::{
     frame::Frame,
     parse::{self, ParseError, ParseResult},
@@ -16,8 +14,6 @@ pub enum Command {
 
 impl Command {
     pub fn from_frame(frame: Frame) -> ParseResult<Command> {
-        // TODO: array?
-        // TODO: full parser: tokenizer, etc. etc..
         if let Frame::Bulk(stream) = frame {
             // let (cmd, rest) = string.split_once(' ')?;
             // match cmd {

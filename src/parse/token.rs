@@ -22,7 +22,6 @@ pub enum TokenType {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-// TODO: needed?
 pub enum Literal {
     String(String),
     Number(f64),
