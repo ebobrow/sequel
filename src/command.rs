@@ -30,6 +30,7 @@ impl Command {
             //     _ => None,
             // }
             parse::parse(stream);
+            // TODO
             Some(Command::Select {
                 key: "*".to_string(),
                 table: "people".to_string(),

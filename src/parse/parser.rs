@@ -1,11 +1,33 @@
+use std::fmt::Debug;
+
 use super::{
     ast::{Expr, Key},
     token::{Literal, Token, TokenType},
 };
 
-// TODO: this sucks (and remove `unwrap`s)
 enum Error {
-    Parse,
+    Unexpected {
+        expected: Vec<TokenType>,
+        got: Token,
+    },
+    UnexpectedEnd,
+    Internal,
+}
+
+impl Debug for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected { expected, got } => {
+                let mut msg = format!("Expected one of: {:?}", expected[0]);
+                for ty in &expected[1..] {
+                    msg.push_str(&format!(", {:?}", ty)[..]);
+                }
+                write!(f, "{}\nGot: {:#?}", msg, got)
+            }
+            Self::UnexpectedEnd => write!(f, "Unexpected end of file"),
+            Self::Internal => write!(f, "Internal error"),
+        }
+    }
 }
 
 pub struct Parser {
@@ -19,14 +41,24 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Option<Expr> {
-        self.command().ok()
+        match self.command() {
+            Ok(expr) => Some(expr),
+            Err(e) => {
+                eprintln!("Error:\n{:?}", e);
+                None
+            }
+        }
     }
 
     fn command(&mut self) -> Result<Expr, Error> {
-        match self.advance().ok_or(Error::Parse)?.ty() {
+        let cur = self.advance()?;
+        match cur.ty() {
             TokenType::Insert => self.insert(),
             TokenType::Select => self.select(),
-            _ => Err(Error::Parse),
+            _ => Err(Error::Unexpected {
+                expected: vec![TokenType::Insert, TokenType::Select],
+                got: cur.clone(),
+            }),
         }
     }
 
@@ -53,8 +85,8 @@ impl Parser {
     }
 
     fn key(&mut self) -> Result<Key, Error> {
-        if self.peek().ok_or(Error::Parse)?.ty() == &TokenType::Star {
-            self.advance();
+        if self.peek()?.ty() == &TokenType::Star {
+            self.advance()?;
             Ok(Key::Glob)
         } else {
             let first = self.consume(&TokenType::Identifier)?.clone();
@@ -78,48 +110,45 @@ impl Parser {
     }
 
     fn literal(&mut self) -> Result<Literal, Error> {
-        let tok = self.advance().ok_or(Error::Parse)?;
+        let tok = self.advance()?;
         match tok.ty() {
             TokenType::Number => Ok(tok.literal().clone()),
             TokenType::String => Ok(tok.literal().clone()),
-            _ => Err(Error::Parse),
+            _ => Err(Error::Unexpected {
+                expected: vec![TokenType::Number, TokenType::String],
+                got: tok.clone(),
+            }),
         }
     }
 
-    fn peek(&self) -> Option<&Token> {
-        self.tokens.get(self.current)
+    fn peek(&self) -> Result<&Token, Error> {
+        self.tokens.get(self.current).ok_or(Error::UnexpectedEnd)
     }
 
-    fn previous(&self) -> Option<&Token> {
+    fn previous(&self) -> Result<&Token, Error> {
         if self.current == 0 {
-            None
+            Err(Error::Internal)
         } else {
-            self.tokens.get(self.current - 1)
+            self.tokens
+                .get(self.current - 1)
+                .ok_or(Error::UnexpectedEnd)
         }
     }
 
-    fn is_at_end(&self) -> bool {
-        self.peek().unwrap().ty() == &TokenType::EOF
-    }
-
-    fn advance(&mut self) -> Option<&Token> {
-        if self.is_at_end() {
-            None
-        } else {
-            self.current += 1;
-            self.previous()
-        }
+    fn advance(&mut self) -> Result<&Token, Error> {
+        self.current += 1;
+        self.previous()
     }
 
     fn consume(&mut self, ty: &TokenType) -> Result<&Token, Error> {
-        if let Some(tok) = self.peek() {
-            if tok.ty() == ty {
-                Ok(self.advance().unwrap())
-            } else {
-                Err(Error::Parse)
-            }
+        let next = self.peek()?;
+        if next.ty() == ty {
+            self.advance()
         } else {
-            Err(Error::Parse)
+            Err(Error::Unexpected {
+                expected: vec![ty.clone()],
+                got: next.clone(),
+            })
         }
     }
 }
