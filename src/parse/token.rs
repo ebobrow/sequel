@@ -53,4 +53,8 @@ impl Token {
     pub fn literal(&self) -> &Literal {
         &self.literal
     }
+
+    pub fn lexeme(&self) -> &Bytes {
+        &self.lexeme
+    }
 }

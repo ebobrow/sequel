@@ -3,7 +3,7 @@ use bytes::Bytes;
 use parser::Parser;
 use scanner::Scanner;
 
-use self::ast::Expr;
+pub use self::ast::{Expr, Key};
 pub use self::error::{ParseError, ParseResult};
 
 mod ast;

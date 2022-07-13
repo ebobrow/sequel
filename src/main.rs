@@ -5,7 +5,7 @@ use std::{
 };
 
 use bytes::Bytes;
-use command::Command;
+use command::run_cmd;
 use connection::Connection;
 use frame::Frame;
 use tokio::net::{TcpListener, TcpStream};
@@ -20,7 +20,7 @@ pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T> = std::result::Result<T, Error>;
 
 // TODO: `Page` type
-type Db = Arc<Mutex<HashMap<String, BTreeMap<String, Bytes>>>>;
+pub type Db = Arc<Mutex<HashMap<String, BTreeMap<String, Bytes>>>>;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
@@ -50,35 +50,9 @@ async fn main() -> io::Result<()> {
 
 async fn process(socket: TcpStream, db: Db) {
     let mut connection = Connection::new(socket);
-    while let Some(frame) = connection.read_frame().await.unwrap() {
-        let response = match Command::from_frame(frame) {
-            // TODO: Command::Insert
-            // Command::Set(key, val) => {
-            //     let mut db = db.lock().unwrap();
-            //     db.insert(key, val);
-            //     Frame::String("OK".to_string())
-            // }
-            Ok(Command::Select { key, table }) => {
-                let db = db.lock().unwrap();
-                if let Some(table) = db.get(&table) {
-                    match &key[..] {
-                        "*" => {
-                            Frame::Array(table.values().map(|v| Frame::Bulk(v.clone())).collect())
-                        }
-                        _ => {
-                            if let Some((_, v)) = table.iter().find(|(k, _)| **k == key) {
-                                Frame::Bulk(v.clone())
-                            } else {
-                                Frame::Null
-                            }
-                        }
-                    }
-                } else {
-                    Frame::Error(format!("Table \"{}\" not found", table))
-                }
-            }
-            Err(e) => Frame::Error(format!("Error:\n{:?}", e)),
-        };
+    // TODO: write some sort of client so that we don't send whole SQL expressions through TCP
+    while let Some(Frame::Bulk(stream)) = connection.read_frame().await.unwrap() {
+        let response = run_cmd(&db, stream);
         connection.write_frame(&response).await.unwrap();
     }
 }
