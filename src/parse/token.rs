@@ -32,6 +32,7 @@ pub enum Literal {
 pub struct Token {
     ty: TokenType,
     // TODO: Bytes or String? Or &[u8] or Vec<u8>?
+    // TODO: also is this needed except for identifiers, which can be moved to `literal`
     lexeme: Bytes,
     literal: Literal,
 }

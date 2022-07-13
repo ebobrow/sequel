@@ -58,7 +58,7 @@ impl Scanner {
                 } else if c.is_ascii_alphabetic() {
                     self.identifier()?;
                 } else {
-                    return Err(ParseError::Unrecognized);
+                    return Err(ParseError::Unrecognized(*c));
                 }
             }
         }
@@ -116,7 +116,7 @@ impl Scanner {
     }
 
     fn number(&mut self) -> ParseResult<()> {
-        while self.peek()?.is_ascii_digit() {
+        while !self.is_at_end() && self.peek()?.is_ascii_digit() {
             self.advance()?;
         }
 
@@ -140,7 +140,7 @@ impl Scanner {
     }
 
     fn identifier(&mut self) -> ParseResult<()> {
-        while self.peek()?.is_ascii_alphabetic() {
+        while !self.is_at_end() && self.peek()?.is_ascii_alphabetic() {
             self.advance()?;
         }
 

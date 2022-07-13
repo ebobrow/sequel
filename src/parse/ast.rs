@@ -1,6 +1,6 @@
 use super::token::{Literal, Token};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Expr {
     Select {
         key: Key,
@@ -14,7 +14,7 @@ pub enum Expr {
 }
 
 // TODO: better name
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Key {
     Glob,
     List(Vec<Token>),

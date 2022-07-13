@@ -8,7 +8,7 @@ pub enum ParseError {
         got: Token,
     },
     UnexpectedEnd,
-    Unrecognized,
+    Unrecognized(u8),
     Internal,
 }
 
@@ -23,7 +23,7 @@ impl Debug for ParseError {
                 write!(f, "{}\nGot: {:#?}", msg, got)
             }
             Self::UnexpectedEnd => write!(f, "Unexpected end of file"),
-            Self::Unrecognized => write!(f, "Unrecognized token"),
+            Self::Unrecognized(c) => write!(f, "Unrecognized token {:?}", *c as char),
             Self::Internal => write!(f, "Internal error"),
         }
     }
