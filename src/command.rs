@@ -30,7 +30,7 @@ impl Command {
             // }
             match parse::parse(stream) {
                 Ok(_) => {
-                    // TODO
+                    // TODO: actually parse
                     Ok(Command::Select {
                         key: "*".to_string(),
                         table: "people".to_string(),

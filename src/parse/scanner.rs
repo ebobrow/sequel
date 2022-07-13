@@ -1,7 +1,10 @@
 use bytes::Bytes;
 use phf::phf_map;
 
-use super::token::{Literal, Token, TokenType};
+use super::{
+    token::{Literal, Token, TokenType},
+    ParseError, ParseResult,
+};
 
 static KEYWORDS: phf::Map<&'static [u8], TokenType> = phf_map! {
     b"INSERT" => TokenType::Insert,
@@ -20,7 +23,7 @@ pub struct Scanner {
 }
 
 impl Scanner {
-    pub fn scan(source: Bytes) -> Vec<Token> {
+    pub fn scan(source: Bytes) -> ParseResult<Vec<Token>> {
         let mut scanner = Scanner {
             source,
             tokens: Vec::new(),
@@ -30,7 +33,7 @@ impl Scanner {
 
         while !scanner.is_at_end() {
             scanner.start = scanner.current;
-            scanner.scan_token();
+            scanner.scan_token()?;
         }
         scanner.tokens.push(Token::new(
             TokenType::EOF,
@@ -38,28 +41,28 @@ impl Scanner {
             Literal::Null,
         ));
 
-        scanner.tokens
+        Ok(scanner.tokens)
     }
 
-    fn scan_token(&mut self) {
-        match self.advance() {
+    fn scan_token(&mut self) -> ParseResult<()> {
+        match self.advance()? {
             b'*' => self.add_token(TokenType::Star, Literal::Null),
-            b'"' => self.string(),
+            b'"' => self.string()?,
             b'(' => self.add_token(TokenType::LeftParen, Literal::Null),
             b')' => self.add_token(TokenType::RightParen, Literal::Null),
             b',' => self.add_token(TokenType::Comma, Literal::Null),
             b' ' => {}
             c => {
                 if c.is_ascii_digit() {
-                    self.number();
+                    self.number()?;
                 } else if c.is_ascii_alphabetic() {
-                    self.identifier();
+                    self.identifier()?;
                 } else {
-                    // TODO: Errors
-                    unimplemented!()
+                    return Err(ParseError::Unrecognized);
                 }
             }
         }
+        Ok(())
     }
 
     fn add_token(&mut self, ty: TokenType, literal: Literal) {
@@ -74,55 +77,53 @@ impl Scanner {
         self.current >= self.source.len()
     }
 
-    fn advance(&mut self) -> u8 {
+    fn advance(&mut self) -> ParseResult<&u8> {
         self.current += 1;
-        self.source[self.current - 1]
+        self.source
+            .get(self.current - 1)
+            .ok_or(ParseError::UnexpectedEnd)
     }
 
-    fn peek(&self) -> u8 {
-        if self.is_at_end() {
-            b'\0'
-        } else {
-            self.source[self.current]
-        }
+    fn peek(&self) -> ParseResult<&u8> {
+        self.source
+            .get(self.current)
+            .ok_or(ParseError::UnexpectedEnd)
     }
 
-    fn peek_next(&self) -> u8 {
-        if self.is_at_end() {
-            b'\0'
-        } else {
-            self.source[self.current + 1]
-        }
+    fn peek_next(&self) -> ParseResult<&u8> {
+        self.source
+            .get(self.current + 1)
+            .ok_or(ParseError::UnexpectedEnd)
     }
 
-    fn string(&mut self) {
-        while self.peek() != b'"' && !self.is_at_end() {
-            self.advance();
+    fn string(&mut self) -> ParseResult<()> {
+        while self.peek()? != &b'"' {
+            self.advance()?;
         }
 
         if self.is_at_end() {
-            // TODO: error handling
-            panic!("Unterminated string");
+            return Err(ParseError::UnexpectedEnd);
         }
 
-        self.advance();
+        self.advance()?;
         self.add_token(
             TokenType::String,
             Literal::String(
                 String::from_utf8(self.source[self.start + 1..self.current - 1].to_vec()).unwrap(),
             ),
-        )
+        );
+        Ok(())
     }
 
-    fn number(&mut self) {
-        while self.peek().is_ascii_digit() {
-            self.advance();
+    fn number(&mut self) -> ParseResult<()> {
+        while self.peek()?.is_ascii_digit() {
+            self.advance()?;
         }
 
-        if self.peek() == b'.' && self.peek_next().is_ascii_digit() {
-            self.advance();
-            while self.peek().is_ascii_digit() {
-                self.advance();
+        if self.peek()? == &b'.' && self.peek_next()?.is_ascii_digit() {
+            self.advance()?;
+            while self.peek()?.is_ascii_digit() {
+                self.advance()?;
             }
         }
 
@@ -134,12 +135,13 @@ impl Scanner {
                     .parse()
                     .unwrap(),
             ),
-        )
+        );
+        Ok(())
     }
 
-    fn identifier(&mut self) {
-        while self.peek().is_ascii_alphabetic() {
-            self.advance();
+    fn identifier(&mut self) -> ParseResult<()> {
+        while self.peek()?.is_ascii_alphabetic() {
+            self.advance()?;
         }
 
         let text = &self.source[self.start..self.current];
@@ -149,5 +151,6 @@ impl Scanner {
             TokenType::Identifier
         };
         self.add_token(ty, Literal::Null);
+        Ok(())
     }
 }

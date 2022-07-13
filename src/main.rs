@@ -52,6 +52,7 @@ async fn process(socket: TcpStream, db: Db) {
     let mut connection = Connection::new(socket);
     while let Some(frame) = connection.read_frame().await.unwrap() {
         let response = match Command::from_frame(frame) {
+            // TODO: Command::Insert
             // Command::Set(key, val) => {
             //     let mut db = db.lock().unwrap();
             //     db.insert(key, val);
