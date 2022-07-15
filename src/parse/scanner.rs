@@ -1,17 +1,14 @@
 use bytes::Bytes;
 use phf::phf_map;
 
-use super::{
-    token::{Literal, Token, TokenType},
-    ParseError, ParseResult,
-};
+use super::{token::Token, ParseError, ParseResult};
 
-static KEYWORDS: phf::Map<&'static [u8], TokenType> = phf_map! {
-    b"INSERT" => TokenType::Insert,
-    b"SELECT" => TokenType::Select,
-    b"FROM" => TokenType::From,
-    b"INTO" => TokenType::Into,
-    b"VALUES" => TokenType::Values,
+static KEYWORDS: phf::Map<&'static [u8], Token> = phf_map! {
+    b"INSERT" => Token::Insert,
+    b"SELECT" => Token::Select,
+    b"FROM" => Token::From,
+    b"INTO" => Token::Into,
+    b"VALUES" => Token::Values,
 };
 
 pub struct Scanner {
@@ -35,22 +32,18 @@ impl Scanner {
             scanner.start = scanner.current;
             scanner.scan_token()?;
         }
-        scanner.tokens.push(Token::new(
-            TokenType::EOF,
-            Bytes::from_static(&[]),
-            Literal::Null,
-        ));
+        scanner.tokens.push(Token::EOF);
 
         Ok(scanner.tokens)
     }
 
     fn scan_token(&mut self) -> ParseResult<()> {
         match self.advance()? {
-            b'*' => self.add_token(TokenType::Star, Literal::Null),
+            b'*' => self.add_token(Token::Star),
             b'"' => self.string()?,
-            b'(' => self.add_token(TokenType::LeftParen, Literal::Null),
-            b')' => self.add_token(TokenType::RightParen, Literal::Null),
-            b',' => self.add_token(TokenType::Comma, Literal::Null),
+            b'(' => self.add_token(Token::LeftParen),
+            b')' => self.add_token(Token::RightParen),
+            b',' => self.add_token(Token::Comma),
             b' ' => {}
             c => {
                 if c.is_ascii_digit() {
@@ -65,12 +58,8 @@ impl Scanner {
         Ok(())
     }
 
-    fn add_token(&mut self, ty: TokenType, literal: Literal) {
-        self.tokens.push(Token::new(
-            ty,
-            Bytes::copy_from_slice(&self.source[self.start..self.current]),
-            literal,
-        ));
+    fn add_token(&mut self, tok: Token) {
+        self.tokens.push(tok);
     }
 
     fn is_at_end(&self) -> bool {
@@ -106,12 +95,9 @@ impl Scanner {
         }
 
         self.advance()?;
-        self.add_token(
-            TokenType::String,
-            Literal::String(
-                String::from_utf8(self.source[self.start + 1..self.current - 1].to_vec()).unwrap(),
-            ),
-        );
+        self.add_token(Token::String(
+            String::from_utf8(self.source[self.start + 1..self.current - 1].to_vec()).unwrap(),
+        ));
         Ok(())
     }
 
@@ -127,15 +113,12 @@ impl Scanner {
             }
         }
 
-        self.add_token(
-            TokenType::Number,
-            Literal::Number(
-                std::str::from_utf8(&self.source[self.start..self.current])
-                    .unwrap()
-                    .parse()
-                    .unwrap(),
-            ),
-        );
+        self.add_token(Token::Number(
+            std::str::from_utf8(&self.source[self.start..self.current])
+                .unwrap()
+                .parse()
+                .unwrap(),
+        ));
         Ok(())
     }
 
@@ -148,9 +131,11 @@ impl Scanner {
         let ty = if let Some(ty) = KEYWORDS.get(text) {
             ty.clone()
         } else {
-            TokenType::Identifier
+            Token::Identifier(
+                String::from_utf8(self.source[self.start..self.current].to_vec()).unwrap(),
+            )
         };
-        self.add_token(ty, Literal::Null);
+        self.add_token(ty);
         Ok(())
     }
 }

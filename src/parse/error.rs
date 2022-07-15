@@ -1,10 +1,11 @@
 use std::fmt::Debug;
 
-use super::token::{Token, TokenType};
+use super::token::Token;
 
 pub enum ParseError {
     Unexpected {
-        expected: Vec<TokenType>,
+        // TODO: This requires values for literal types like `Number`
+        expected: Vec<Token>,
         got: Token,
     },
     UnexpectedEnd,

@@ -31,7 +31,7 @@ mod tests {
         ast::{Expr, Key},
         parser::Parser,
         scanner::Scanner,
-        token::{Literal, Token, TokenType},
+        token::Token,
     };
 
     #[test]
@@ -41,44 +41,16 @@ mod tests {
         assert_eq!(
             tokens,
             vec![
-                Token::new(
-                    TokenType::Insert,
-                    Bytes::from_static(b"INSERT"),
-                    Literal::Null
-                ),
-                Token::new(
-                    TokenType::Number,
-                    Bytes::from_static(b"17.6"),
-                    Literal::Number(17.6)
-                ),
-                Token::new(TokenType::Star, Bytes::from_static(b"*"), Literal::Null),
-                Token::new(
-                    TokenType::LeftParen,
-                    Bytes::from_static(b"("),
-                    Literal::Null
-                ),
-                Token::new(
-                    TokenType::String,
-                    Bytes::from_static(b"\"one\""),
-                    Literal::String("one".to_string())
-                ),
-                Token::new(TokenType::Comma, Bytes::from_static(b","), Literal::Null),
-                Token::new(
-                    TokenType::String,
-                    Bytes::from_static(b"\"two\""),
-                    Literal::String("two".to_string())
-                ),
-                Token::new(
-                    TokenType::RightParen,
-                    Bytes::from_static(b")"),
-                    Literal::Null
-                ),
-                Token::new(
-                    TokenType::Identifier,
-                    Bytes::from_static(b"table"),
-                    Literal::Null
-                ),
-                Token::new(TokenType::EOF, Bytes::new(), Literal::Null)
+                Token::Insert,
+                Token::Number(17.6),
+                Token::Star,
+                Token::LeftParen,
+                Token::String("one".to_string()),
+                Token::Comma,
+                Token::String("two".to_string()),
+                Token::RightParen,
+                Token::Identifier(String::from("table")),
+                Token::EOF,
             ]
         );
     }
@@ -86,30 +58,18 @@ mod tests {
     #[test]
     fn parser() {
         let tokens = vec![
-            Token::new(
-                TokenType::Select,
-                Bytes::from_static(b"SELECT"),
-                Literal::Null,
-            ),
-            Token::new(TokenType::Star, Bytes::from_static(b"*"), Literal::Null),
-            Token::new(TokenType::From, Bytes::from_static(b"FROM"), Literal::Null),
-            Token::new(
-                TokenType::Identifier,
-                Bytes::from_static(b"people"),
-                Literal::Null,
-            ),
-            Token::new(TokenType::EOF, Bytes::new(), Literal::Null),
+            Token::Select,
+            Token::Star,
+            Token::From,
+            Token::Identifier(String::from("people")),
+            Token::EOF,
         ];
         let expr = Parser::new(tokens).parse().unwrap();
         assert_eq!(
             expr,
             Expr::Select {
                 key: Key::Glob,
-                table: Token::new(
-                    TokenType::Identifier,
-                    Bytes::from_static(b"people"),
-                    Literal::Null
-                )
+                table: Token::Identifier(String::from("people")),
             }
         );
     }

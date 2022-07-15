@@ -10,7 +10,7 @@ pub fn run_cmd(db: &Db, stream: Bytes) -> Frame {
     match parse::parse(stream) {
         Ok(Expr::Select { key, table }) => {
             let db = db.lock().unwrap();
-            let table_name = std::str::from_utf8(table.lexeme()).unwrap();
+            let table_name = table.ident().unwrap();
             if let Some(table) = db.get(table_name) {
                 match key {
                     Key::Glob => {
@@ -22,7 +22,7 @@ pub fn run_cmd(db: &Db, stream: Bytes) -> Frame {
                                 .find(|col| {
                                     // TODO: this isn't actually how it works because we don't
                                     // have `Page` datatype or anything
-                                    std::str::from_utf8(col.lexeme()).unwrap() == &k[..]
+                                    &col.ident().unwrap()[..] == &k[..]
                                 })
                                 .is_some()
                         }) {

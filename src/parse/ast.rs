@@ -1,4 +1,4 @@
-use super::token::{Literal, Token};
+use super::token::Token;
 
 #[derive(Debug, PartialEq)]
 pub enum Expr {
@@ -9,8 +9,14 @@ pub enum Expr {
     Insert {
         table: Token,
         cols: Key,
-        values: Vec<Literal>,
+        values: Vec<LiteralValue>,
     },
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum LiteralValue {
+    String(String),
+    Number(f64),
 }
 
 // TODO: better name
