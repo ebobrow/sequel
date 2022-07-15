@@ -12,7 +12,6 @@ static KEYWORDS: phf::Map<&'static [u8], Token> = phf_map! {
 };
 
 pub struct Scanner {
-    // TODO: again, Bytes or String
     source: Bytes,
     tokens: Vec<Token>,
     start: usize,

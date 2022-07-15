@@ -2,6 +2,7 @@ use std::fmt::Debug;
 
 use super::token::Token;
 
+#[derive(PartialEq)]
 pub enum ParseError {
     Unexpected {
         // TODO: This requires values for literal types like `Number`

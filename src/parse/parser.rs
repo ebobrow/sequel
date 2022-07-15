@@ -1,5 +1,3 @@
-use bytes::Bytes;
-
 use super::{
     ast::{Expr, Key, LiteralValue},
     token::Token,
