@@ -2,6 +2,8 @@ use std::io::Cursor;
 
 use bytes::{Buf, Bytes};
 
+use crate::error::Error;
+
 pub enum Frame {
     Bulk(Bytes),
     Array(Vec<Frame>),
@@ -55,20 +57,4 @@ fn get_line<'a>(src: &mut Cursor<&'a [u8]>) -> Result<&'a [u8], Error> {
     }
 
     Err(Error::Incomplete)
-}
-
-// TODO: I don't like this
-#[derive(Debug)]
-pub enum Error {
-    Incomplete,
-    Other(crate::Error),
-}
-impl std::error::Error for Error {}
-impl std::fmt::Display for Error {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Error::Incomplete => "stream ended early".fmt(fmt),
-            Error::Other(err) => err.fmt(fmt),
-        }
-    }
 }

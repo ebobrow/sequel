@@ -6,7 +6,10 @@ use tokio::{
     net::TcpStream,
 };
 
-use crate::frame::Frame;
+use crate::{
+    error::{self, Error},
+    frame::Frame,
+};
 
 pub struct Connection {
     stream: BufWriter<TcpStream>,
@@ -21,7 +24,7 @@ impl Connection {
         }
     }
 
-    pub async fn read_frame(&mut self) -> crate::Result<Option<Frame>> {
+    pub async fn read_frame(&mut self) -> error::Result<Option<Frame>> {
         loop {
             if let Some(frame) = self.parse_frame()? {
                 return Ok(Some(frame));
@@ -31,13 +34,13 @@ impl Connection {
                 if self.buffer.is_empty() {
                     return Ok(None);
                 } else {
-                    return Err("connection reset by peer".into());
+                    return Err(Error::Other("connection reset by peer".into()));
                 }
             }
         }
     }
 
-    fn parse_frame(&mut self) -> crate::Result<Option<Frame>> {
+    fn parse_frame(&mut self) -> error::Result<Option<Frame>> {
         let mut buf = Cursor::new(&self.buffer[..]);
         match Frame::check(&mut buf) {
             Ok(_) => {
@@ -47,7 +50,7 @@ impl Connection {
                 self.buffer.advance(len);
                 Ok(Some(frame))
             }
-            Err(crate::frame::Error::Incomplete) => Ok(None),
+            Err(Error::Incomplete) => Ok(None),
             Err(e) => Err(e.into()),
         }
     }
