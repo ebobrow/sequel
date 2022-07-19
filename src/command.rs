@@ -1,9 +1,9 @@
 use bytes::Bytes;
 
 use crate::{
+    data::Db,
     frame::Frame,
     parse::{self, Expr, Key},
-    Db,
 };
 
 pub fn run_cmd(db: &Db, stream: Bytes) -> Frame {
@@ -14,22 +14,35 @@ pub fn run_cmd(db: &Db, stream: Bytes) -> Frame {
             if let Some(table) = db.get(table_name) {
                 match key {
                     Key::Glob => {
-                        Frame::Array(table.values().map(|v| Frame::Bulk(v.clone())).collect())
+                        // TODO: extract to function on table
+                        let mut values = Vec::new();
+                        for row in &table.rows {
+                            let mut s = String::new();
+                            for col in &row.cols {
+                                s.push_str(std::str::from_utf8(&col.data).unwrap());
+                            }
+                            // TODO: don't go from Bytes back to String
+                            values.push(Frame::Bulk(Bytes::copy_from_slice(s.as_bytes())));
+                        }
+                        Frame::Array(values)
                     }
                     Key::List(cols) => {
-                        if let Some((_, v)) = table.iter().find(|(k, _)| {
-                            cols.iter()
-                                .find(|col| {
-                                    // TODO: this isn't actually how it works because we don't
-                                    // have `Page` datatype or anything
-                                    &col.ident().unwrap()[..] == &k[..]
-                                })
-                                .is_some()
-                        }) {
-                            Frame::Bulk(v.clone())
-                        } else {
-                            Frame::Null
+                        let mut values = Vec::new();
+                        for row in &table.rows {
+                            let mut s = String::new();
+                            for col in &row.cols {
+                                if cols
+                                    .iter()
+                                    .find(|c| c.ident().unwrap()[..] == col.name)
+                                    .is_some()
+                                {
+                                    s.push_str(std::str::from_utf8(&col.data).unwrap());
+                                }
+                            }
+                            // TODO: don't go from Bytes back to String
+                            values.push(Frame::Bulk(Bytes::copy_from_slice(s.as_bytes())));
                         }
+                        Frame::Array(values)
                     }
                 }
             } else {

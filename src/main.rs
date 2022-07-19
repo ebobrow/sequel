@@ -1,22 +1,23 @@
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     io,
     sync::{Arc, Mutex},
 };
 
-use bytes::Bytes;
 use command::run_cmd;
 use connection::Connection;
+use data::{Db, Table};
 use frame::Frame;
 use tokio::net::{TcpListener, TcpStream};
 
+use crate::data::ColumnHeader;
+
 mod command;
 mod connection;
+mod data;
 mod error;
 mod frame;
 mod parse;
-
-pub type Db = Arc<Mutex<HashMap<String, BTreeMap<String, Bytes>>>>;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
@@ -24,13 +25,13 @@ async fn main() -> io::Result<()> {
 
     println!("Listening");
 
-    // let db = Db::default();
-    let db = Arc::new(Mutex::new(HashMap::from([(
-        String::from("people"),
-        BTreeMap::from([
-            (String::from("Elliot"), Bytes::from_static(b"Elliot 16")),
-            (String::from("Joe"), Bytes::from_static(b"Joe 69")),
-        ]),
+    let db: Db = Arc::new(Mutex::new(HashMap::from([(
+        "people".into(),
+        Table::try_from(vec![
+            ColumnHeader::new("name".into()),
+            ColumnHeader::new("age".into()),
+        ])
+        .unwrap(),
     )])));
 
     loop {
@@ -44,6 +45,7 @@ async fn main() -> io::Result<()> {
     }
 }
 
+// TODO: `conn` mod or whatever name and move `Error`
 async fn process(socket: TcpStream, db: Db) {
     let mut connection = Connection::new(socket);
     // TODO: write some sort of client so that we don't send whole SQL expressions through TCP
