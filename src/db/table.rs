@@ -57,6 +57,7 @@ impl Table {
             .into_iter()
             .partition(|col| col.name() == self.primary_key_name());
         // TODO: errors
+        // TODO: null value for missing cols (some sort of `Value` enum or reuse `LiteralValue`)
         match &primary_col[..] {
             [] => {
                 self.rows.insert(Row::new(

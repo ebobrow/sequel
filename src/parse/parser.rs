@@ -33,7 +33,9 @@ impl Parser {
     fn insert(&mut self) -> ParseResult<Expr> {
         self.consume(&Token::Into)?;
         let table = self.consume_ident()?.clone();
+        // TODO: list is optional; if omitted uses all columns in original order
         self.consume(&Token::LeftParen)?;
+        // TODO: also can't be glob
         let cols = self.key()?;
         self.consume(&Token::RightParen)?;
         self.consume(&Token::Values)?;
