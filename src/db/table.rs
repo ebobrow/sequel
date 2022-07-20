@@ -1,5 +1,7 @@
 use std::collections::BTreeSet;
 
+use bytes::Bytes;
+
 use super::{
     row::{ColumnHeader, Row},
     Column,
@@ -8,6 +10,7 @@ use super::{
 pub struct Table {
     col_headers: Vec<ColumnHeader>,
     rows: BTreeSet<Row>,
+    inc: Option<u8>,
 }
 
 impl TryFrom<Vec<ColumnHeader>> for Table {
@@ -31,11 +34,13 @@ impl TryFrom<Vec<ColumnHeader>> for Table {
                 Ok(Table {
                     col_headers,
                     rows: BTreeSet::new(),
+                    inc: Some(0),
                 })
             }
             1 => Ok(Table {
                 col_headers: cols,
                 rows: BTreeSet::new(),
+                inc: None,
             }),
             n => Err(format!("Expected 1 primary key, found {}", n)),
         }
@@ -43,35 +48,32 @@ impl TryFrom<Vec<ColumnHeader>> for Table {
 }
 
 impl Table {
-    // TODO: result instead of option?
-    // pub fn primary_key_of(&self, row: &Row) -> Option<&Column> {
-    //     if let Some(row) = self.rows.iter().find(|&r| r == row) {
-    //         self.col_headers
-    //             .iter()
-    //             .find(|col| col.is_primary_key)
-    //             .map(|col| row.cols.iter().find(|c| c.name == col.name))
-    //             .flatten()
-    //     } else {
-    //         None
-    //     }
-    // }
-
-    // pub fn primary_key(&self) -> &ColumnHeader {
-    //     self.col_headers
-    //         .iter()
-    //         .find(|col| col.is_primary_key)
-    //         .unwrap()
-    // }
-
     pub fn rows(&self) -> &BTreeSet<Row> {
         &self.rows
     }
 
     pub fn append(&mut self, cols: Vec<Column>) {
-        self.rows.insert(Row::new(self.primary_col(), cols));
+        let (primary_col, cols): (Vec<_>, Vec<_>) = cols
+            .into_iter()
+            .partition(|col| col.name() == self.primary_key_name());
+        // TODO: errors
+        match &primary_col[..] {
+            [] => {
+                self.rows.insert(Row::new(
+                    Column::new(Bytes::copy_from_slice(&[self.inc.unwrap()]), "ID".into()),
+                    cols,
+                ));
+                self.inc = self.inc.map(|i| i + 1);
+            }
+            [primary_col] => {
+                self.rows.insert(Row::new(primary_col.clone(), cols));
+            }
+            _ => panic!(),
+        };
     }
 
-    fn primary_col(&self) -> String {
+    // TODO: store this as field to avoid so many iterations?
+    fn primary_key_name(&self) -> String {
         self.col_headers
             .iter()
             .find(|col| col.is_primary())

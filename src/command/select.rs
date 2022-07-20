@@ -20,7 +20,7 @@ pub fn select(db: &Db, key: Key, table: Token) -> Frame {
                     .collect(),
             ),
             Key::List(cols) => {
-                let names = cols
+                let names: Vec<_> = cols
                     .iter()
                     .map(|col| col.ident().unwrap().to_string())
                     .collect();
@@ -28,7 +28,7 @@ pub fn select(db: &Db, key: Key, table: Token) -> Frame {
                     table
                         .rows()
                         .iter()
-                        .map(|row| cols_to_frame(row.cols(&names)))
+                        .map(|row| cols_to_frame(row.cols(&names[..])))
                         .collect(),
                 )
             }

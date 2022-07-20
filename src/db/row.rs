@@ -2,50 +2,44 @@ use bytes::Bytes;
 
 #[derive(Eq)]
 pub struct Row {
-    // TODO: I don't like that we store this on every row
-    primary_col: String,
+    primary_key_col: Column,
     cols: Vec<Column>,
 }
 
 impl Row {
-    pub fn new(primary_col: String, cols: Vec<Column>) -> Row {
-        Row { primary_col, cols }
+    pub fn new(primary_key_col: Column, cols: Vec<Column>) -> Row {
+        Row {
+            primary_key_col,
+            cols,
+        }
     }
 
     pub fn all_cols(&self) -> impl Iterator<Item = &Column> {
         self.cols.iter()
     }
 
-    pub fn cols<'a>(&'a self, names: &'a Vec<String>) -> impl Iterator<Item = &'a Column> {
+    pub fn cols<'a>(&'a self, names: &'a [String]) -> impl Iterator<Item = &'a Column> {
         self.cols
             .iter()
             .filter(|col| names.iter().any(|name| name == col.name()))
-    }
-
-    // TODO: Result?
-    pub fn primary_col(&self) -> &Column {
-        self.cols
-            .iter()
-            .find(|col| col.name == self.primary_col)
-            .unwrap()
     }
 }
 
 impl PartialEq for Row {
     fn eq(&self, other: &Self) -> bool {
-        self.primary_col() == other.primary_col()
+        self.primary_key_col == other.primary_key_col
     }
 }
 
 impl PartialOrd for Row {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.primary_col().partial_cmp(other.primary_col())
+        self.primary_key_col.partial_cmp(&other.primary_key_col)
     }
 }
 
 impl Ord for Row {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.primary_col().cmp(other.primary_col())
+        self.primary_key_col.cmp(&other.primary_key_col)
     }
 }
 
@@ -80,7 +74,7 @@ impl ColumnHeader {
     }
 }
 
-#[derive(Eq)]
+#[derive(Eq, Clone)]
 pub struct Column {
     data: Bytes,
     name: String, // Should correspond with name in `ColumnHeader`

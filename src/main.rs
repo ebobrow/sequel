@@ -48,6 +48,7 @@ async fn main() -> io::Result<()> {
 async fn process(socket: TcpStream, db: Db) {
     let mut connection = Connection::new(socket);
     // TODO: write some sort of client so that we don't send whole SQL expressions through TCP
+    // and change from `bin` to `lib` and have client and server binaries?
     while let Some(Frame::Bulk(stream)) = connection.read_frame().await.unwrap() {
         let response = run_cmd(&db, stream);
         connection.write_frame(&response).await.unwrap();
