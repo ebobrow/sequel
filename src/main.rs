@@ -4,9 +4,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use bytes::Bytes;
 use command::run_cmd;
 use connection::{Connection, Frame};
-use db::{ColumnHeader, Db, Table};
+use db::{Column, ColumnHeader, Db, Table};
 use tokio::net::{TcpListener, TcpStream};
 
 mod command;
@@ -20,14 +21,18 @@ async fn main() -> io::Result<()> {
 
     println!("Listening");
 
-    let db: Db = Arc::new(Mutex::new(HashMap::from([(
-        "people".into(),
-        Table::try_from(vec![
+    let db = {
+        let mut table = Table::try_from(vec![
             ColumnHeader::new("name".into()),
             ColumnHeader::new("age".into()),
         ])
-        .unwrap(),
-    )])));
+        .unwrap();
+        table.append(vec![
+            Column::new(Bytes::from("Elliot"), "name".into()),
+            Column::new(Bytes::from("16"), "age".into()),
+        ]);
+        Arc::new(Mutex::new(HashMap::from([("people".into(), table)])))
+    };
 
     loop {
         let (socket, _) = listener.accept().await?;

@@ -3,8 +3,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-pub use self::row::ColumnHeader;
-pub use self::table::Table;
+pub use self::{
+    row::{Column, ColumnHeader, Row},
+    table::Table,
+};
 
 mod row;
 mod table;

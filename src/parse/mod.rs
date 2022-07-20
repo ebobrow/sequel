@@ -3,8 +3,11 @@ use bytes::Bytes;
 use parser::Parser;
 use scanner::Scanner;
 
-pub use self::ast::{Expr, Key};
-pub use self::error::{ParseError, ParseResult};
+pub use self::{
+    ast::{Expr, Key, LiteralValue},
+    error::{ParseError, ParseResult},
+    token::Token,
+};
 
 mod ast;
 mod error;
@@ -36,7 +39,7 @@ mod tests {
 
     #[test]
     fn scanner() {
-        let stream = Bytes::from_static(b"INSERT 17.6 * (\"one\", \"two\") table");
+        let stream = Bytes::from("INSERT 17.6 * (\"one\", \"two\") table");
         let tokens = Scanner::scan(stream).unwrap();
         assert_eq!(
             tokens,
@@ -58,11 +61,11 @@ mod tests {
     #[test]
     fn scanner_err() {
         assert_eq!(
-            Scanner::scan(Bytes::from_static(b"#")),
+            Scanner::scan(Bytes::from("#")),
             Err(ParseError::Unrecognized(b'#'))
         );
         assert_eq!(
-            Scanner::scan(Bytes::from_static(b"\"unterminated string")),
+            Scanner::scan(Bytes::from("\"unterminated string")),
             Err(ParseError::UnexpectedEnd)
         );
     }

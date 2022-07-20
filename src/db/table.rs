@@ -1,6 +1,9 @@
 use std::collections::BTreeSet;
 
-use super::row::{ColumnHeader, Row};
+use super::{
+    row::{ColumnHeader, Row},
+    Column,
+};
 
 pub struct Table {
     col_headers: Vec<ColumnHeader>,
@@ -62,5 +65,18 @@ impl Table {
 
     pub fn rows(&self) -> &BTreeSet<Row> {
         &self.rows
+    }
+
+    pub fn append(&mut self, cols: Vec<Column>) {
+        self.rows.insert(Row::new(self.primary_col(), cols));
+    }
+
+    fn primary_col(&self) -> String {
+        self.col_headers
+            .iter()
+            .find(|col| col.is_primary())
+            .unwrap()
+            .name()
+            .into()
     }
 }

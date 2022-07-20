@@ -48,7 +48,7 @@ impl Connection {
                 Ok(Some(frame))
             }
             Err(ConnError::Incomplete) => Ok(None),
-            Err(e) => Err(e.into()),
+            Err(e) => Err(e),
         }
     }
 
