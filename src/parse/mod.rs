@@ -4,7 +4,7 @@ use parser::Parser;
 use scanner::Scanner;
 
 pub use self::{
-    ast::{Expr, Key, LiteralValue},
+    ast::{Expr, Key, LiteralValue, Tokens},
     error::{ParseError, ParseResult},
     token::Token,
 };

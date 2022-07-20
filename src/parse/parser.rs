@@ -1,5 +1,5 @@
 use super::{
-    ast::{Expr, Key, LiteralValue},
+    ast::{Expr, Key, LiteralValue, Tokens},
     token::Token,
     ParseError, ParseResult,
 };
@@ -33,11 +33,7 @@ impl Parser {
     fn insert(&mut self) -> ParseResult<Expr> {
         self.consume(&Token::Into)?;
         let table = self.consume_ident()?.clone();
-        // TODO: list is optional; if omitted uses all columns in original order
-        self.consume(&Token::LeftParen)?;
-        // TODO: also can't be glob
-        let cols = self.key()?;
-        self.consume(&Token::RightParen)?;
+        let cols = self.tokens()?;
         self.consume(&Token::Values)?;
         let values = self.values()?;
         Ok(Expr::Insert {
@@ -59,13 +55,28 @@ impl Parser {
             self.advance()?;
             Ok(Key::Glob)
         } else {
-            let first = self.consume_ident()?.clone();
-            let mut keys = vec![first];
-            while self.consume(&Token::Comma).is_ok() {
-                keys.push(self.consume_ident()?.clone())
-            }
+            let keys = self.token_list()?;
             Ok(Key::List(keys))
         }
+    }
+
+    fn tokens(&mut self) -> ParseResult<Tokens> {
+        if self.consume(&Token::LeftParen).is_ok() {
+            let tokens = self.token_list()?;
+            self.consume(&Token::RightParen)?;
+            Ok(Tokens::List(tokens))
+        } else {
+            Ok(Tokens::Omitted)
+        }
+    }
+
+    fn token_list(&mut self) -> ParseResult<Vec<Token>> {
+        let first = self.consume_ident()?.clone();
+        let mut tokens = vec![first];
+        while self.consume(&Token::Comma).is_ok() {
+            tokens.push(self.consume_ident()?.clone())
+        }
+        Ok(tokens)
     }
 
     fn values(&mut self) -> ParseResult<Vec<LiteralValue>> {

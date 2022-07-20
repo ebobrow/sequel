@@ -10,7 +10,7 @@ pub enum Expr {
     },
     Insert {
         table: Token,
-        cols: Key,
+        cols: Tokens,
         values: Vec<LiteralValue>,
     },
 }
@@ -35,5 +35,11 @@ impl From<&LiteralValue> for Bytes {
 #[derive(Debug, PartialEq)]
 pub enum Key {
     Glob,
+    List(Vec<Token>),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Tokens {
+    Omitted,
     List(Vec<Token>),
 }
