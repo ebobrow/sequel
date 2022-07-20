@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use bytes::{Buf, Bytes};
 
-use crate::error::Error;
+use super::{ConnError, ConnResult};
 
 pub enum Frame {
     Bulk(Bytes),
@@ -12,15 +12,15 @@ pub enum Frame {
 }
 
 impl Frame {
-    pub fn check(src: &mut Cursor<&[u8]>) -> Result<(), Error> {
+    pub fn check(src: &mut Cursor<&[u8]>) -> ConnResult<()> {
         if !src.has_remaining() {
-            Err(Error::Incomplete)
+            Err(ConnError::Incomplete)
         } else {
             get_line(src).map(|_| ())
         }
     }
 
-    pub fn parse(src: &mut Cursor<&[u8]>) -> Result<Frame, Error> {
+    pub fn parse(src: &mut Cursor<&[u8]>) -> ConnResult<Frame> {
         // for now
         Ok(Frame::Bulk(Bytes::copy_from_slice(get_line(src)?)))
         // Ok(Frame::String(
@@ -45,7 +45,7 @@ impl Frame {
 //     Err(Error::Incomplete)
 // }
 
-fn get_line<'a>(src: &mut Cursor<&'a [u8]>) -> Result<&'a [u8], Error> {
+fn get_line<'a>(src: &mut Cursor<&'a [u8]>) -> ConnResult<&'a [u8]> {
     let start = src.position() as usize;
     let end = src.get_ref().len() - 1;
 
@@ -56,5 +56,5 @@ fn get_line<'a>(src: &mut Cursor<&'a [u8]>) -> Result<&'a [u8], Error> {
         }
     }
 
-    Err(Error::Incomplete)
+    Err(ConnError::Incomplete)
 }

@@ -5,18 +5,13 @@ use std::{
 };
 
 use command::run_cmd;
-use connection::Connection;
-use data::{Db, Table};
-use frame::Frame;
+use connection::{Connection, Frame};
+use db::{ColumnHeader, Db, Table};
 use tokio::net::{TcpListener, TcpStream};
-
-use crate::data::ColumnHeader;
 
 mod command;
 mod connection;
-mod data;
-mod error;
-mod frame;
+mod db;
 mod parse;
 
 #[tokio::main]
@@ -45,7 +40,6 @@ async fn main() -> io::Result<()> {
     }
 }
 
-// TODO: `conn` mod or whatever name and move `Error`
 async fn process(socket: TcpStream, db: Db) {
     let mut connection = Connection::new(socket);
     // TODO: write some sort of client so that we don't send whole SQL expressions through TCP

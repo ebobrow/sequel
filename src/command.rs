@@ -1,11 +1,12 @@
 use bytes::Bytes;
 
 use crate::{
-    data::Db,
-    frame::Frame,
+    connection::Frame,
+    db::Db,
     parse::{self, Expr, Key},
 };
 
+// TODO: this feels weird here. move to parser or conn or db?
 pub fn run_cmd(db: &Db, stream: Bytes) -> Frame {
     match parse::parse(stream) {
         Ok(Expr::Select { key, table }) => {
@@ -16,10 +17,10 @@ pub fn run_cmd(db: &Db, stream: Bytes) -> Frame {
                     Key::Glob => {
                         // TODO: extract to function on table
                         let mut values = Vec::new();
-                        for row in &table.rows {
+                        for row in table.rows() {
                             let mut s = String::new();
-                            for col in &row.cols {
-                                s.push_str(std::str::from_utf8(&col.data).unwrap());
+                            for col in row.cols() {
+                                s.push_str(std::str::from_utf8(col.data()).unwrap());
                             }
                             // TODO: don't go from Bytes back to String
                             values.push(Frame::Bulk(Bytes::copy_from_slice(s.as_bytes())));
@@ -28,15 +29,15 @@ pub fn run_cmd(db: &Db, stream: Bytes) -> Frame {
                     }
                     Key::List(cols) => {
                         let mut values = Vec::new();
-                        for row in &table.rows {
+                        for row in table.rows() {
                             let mut s = String::new();
-                            for col in &row.cols {
+                            for col in row.cols() {
                                 if cols
                                     .iter()
-                                    .find(|c| c.ident().unwrap()[..] == col.name)
+                                    .find(|c| &c.ident().unwrap()[..] == col.name())
                                     .is_some()
                                 {
-                                    s.push_str(std::str::from_utf8(&col.data).unwrap());
+                                    s.push_str(std::str::from_utf8(col.data()).unwrap());
                                 }
                             }
                             // TODO: don't go from Bytes back to String
