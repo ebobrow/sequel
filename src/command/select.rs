@@ -46,5 +46,6 @@ fn cols_to_frame<'a>(cols: impl Iterator<Item = &'a Column>) -> Frame {
             acc.append(&mut col.to_vec());
             acc
         });
-    Frame::Bulk(Bytes::from(bytes))
+    // Prune leading space
+    Frame::Bulk(Bytes::copy_from_slice(&bytes[1..]))
 }

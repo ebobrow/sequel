@@ -19,7 +19,14 @@ pub fn insert(db: &Db, table: Token, cols: Tokens, values: Vec<LiteralValue>) ->
                 table.append(columns);
                 Frame::Null
             }
-            Tokens::Omitted => todo!(),
+            Tokens::Omitted => {
+                let mut columns = Vec::new();
+                for (c, val) in table.col_headers().iter().zip(values.iter()) {
+                    columns.push(Column::new(val.into(), c.name().to_string()));
+                }
+                table.append(columns);
+                Frame::Null
+            }
         }
     } else {
         Frame::Error(format!("Table \"{}\" not found", table_name))

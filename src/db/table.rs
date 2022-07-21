@@ -82,4 +82,8 @@ impl Table {
             .name()
             .into()
     }
+
+    pub fn col_headers(&self) -> &[ColumnHeader] {
+        self.col_headers.as_ref()
+    }
 }
