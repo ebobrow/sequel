@@ -6,36 +6,37 @@ use crate::{
     parse::{Key, Token},
 };
 
-pub fn select(db: &Db, key: Key, table: Token) -> Frame {
-    let db = db.lock().unwrap();
-    let table_name = table.ident().unwrap();
-    if let Some(table) = db.get(table_name) {
+use super::{
+    error::{CmdError, CmdResult},
+    on_table,
+};
+
+pub fn select(db: &Db, key: Key, table: Token) -> CmdResult<Frame> {
+    on_table(db, table, |table| {
         match key {
             // TODO: header on top like "ID | name | age"
-            Key::Glob => Frame::Array(
+            Key::Glob => Ok(Frame::Array(
                 table
                     .rows()
                     .iter()
                     .map(|row| cols_to_frame(row.all_cols()))
                     .collect(),
-            ),
+            )),
             Key::List(cols) => {
-                let names: Vec<_> = cols
+                let names = cols
                     .iter()
-                    .map(|col| col.ident().unwrap().to_string())
-                    .collect();
-                Frame::Array(
+                    .map(|col| Ok(col.ident().ok_or(CmdError::Internal)?.to_string()))
+                    .collect::<CmdResult<Vec<_>>>()?;
+                Ok(Frame::Array(
                     table
                         .rows()
                         .iter()
                         .map(|row| cols_to_frame(row.cols(&names[..])))
                         .collect(),
-                )
+                ))
             }
         }
-    } else {
-        Frame::Error(format!("Table \"{}\" not found", table_name))
-    }
+    })
 }
 
 fn cols_to_frame<'a>(cols: impl Iterator<Item = &'a Column>) -> Frame {

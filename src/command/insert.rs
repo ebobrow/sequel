@@ -4,31 +4,31 @@ use crate::{
     parse::{LiteralValue, Token, Tokens},
 };
 
-// TODO: CmdError, CmdResult
-pub fn insert(db: &Db, table: Token, cols: Tokens, values: Vec<LiteralValue>) -> Frame {
-    // TODO: this is all duplicate code, can move into `command/mod.rs`
-    let mut db = db.lock().unwrap();
-    let table_name = table.ident().unwrap();
-    if let Some(table) = db.get_mut(table_name) {
-        match cols {
-            Tokens::List(cols) => {
-                let mut columns = Vec::new();
-                for (c, val) in cols.iter().zip(values.iter()) {
-                    columns.push(Column::new(val.into(), c.ident().unwrap().to_string()));
-                }
-                table.append(columns);
-                Frame::Null
+use super::{
+    error::{CmdError, CmdResult},
+    on_table_mut,
+};
+
+pub fn insert(db: &Db, table: Token, cols: Tokens, values: Vec<LiteralValue>) -> CmdResult<Frame> {
+    on_table_mut(db, table, |table| match cols {
+        Tokens::List(cols) => {
+            let mut columns = Vec::new();
+            for (c, val) in cols.iter().zip(values.iter()) {
+                columns.push(Column::new(
+                    val.into(),
+                    c.ident().ok_or(CmdError::Internal)?.to_string(),
+                ));
             }
-            Tokens::Omitted => {
-                let mut columns = Vec::new();
-                for (c, val) in table.col_headers().iter().zip(values.iter()) {
-                    columns.push(Column::new(val.into(), c.name().to_string()));
-                }
-                table.append(columns);
-                Frame::Null
-            }
+            table.append(columns);
+            Ok(Frame::Null)
         }
-    } else {
-        Frame::Error(format!("Table \"{}\" not found", table_name))
-    }
+        Tokens::Omitted => {
+            let mut columns = Vec::new();
+            for (c, val) in table.col_headers().iter().zip(values.iter()) {
+                columns.push(Column::new(val.into(), c.name().to_string()));
+            }
+            table.append(columns);
+            Ok(Frame::Null)
+        }
+    })
 }

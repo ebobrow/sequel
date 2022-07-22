@@ -2,29 +2,61 @@ use bytes::Bytes;
 
 use crate::{
     connection::Frame,
-    db::Db,
-    parse::{self, Expr},
+    db::{Db, Table},
+    parse::{self, Expr, Token},
 };
 
-use self::{insert::insert, select::select};
+use self::{
+    error::{CmdError, CmdResult},
+    insert::insert,
+    select::select,
+};
 
+mod error;
 mod insert;
 mod select;
 
 // Basicaly visitor pattern--rename?
 pub fn run_cmd(db: &Db, stream: Bytes) -> Frame {
-    match parse::parse(stream) {
+    let res = match parse::parse(stream) {
         Ok(Expr::Select { key, table }) => select(db, key, table),
         Ok(Expr::Insert {
             table,
             cols,
             values,
         }) => insert(db, table, cols, values),
+        Err(e) => Err(CmdError::Other(format!("{:?}", e))),
+    };
+    match res {
+        Ok(frame) => frame,
         Err(e) => Frame::Error(format!("Error:\n{:?}", e)),
     }
 }
 
-// TODO: make separate test file for each mod?
+fn on_table<F>(db: &Db, table: Token, f: F) -> CmdResult<Frame>
+where
+    F: FnOnce(&Table) -> CmdResult<Frame>,
+{
+    let db = db.lock().unwrap();
+    let table_name = table.ident().ok_or(CmdError::Internal)?;
+    let table = db
+        .get(table_name)
+        .ok_or(CmdError::TableNotFound(table_name.to_string()))?;
+    f(table)
+}
+
+fn on_table_mut<F>(db: &Db, table: Token, f: F) -> CmdResult<Frame>
+where
+    F: FnOnce(&mut Table) -> CmdResult<Frame>,
+{
+    let mut db = db.lock().unwrap();
+    let table_name = table.ident().ok_or(CmdError::Internal)?;
+    let table = db
+        .get_mut(table_name)
+        .ok_or(CmdError::TableNotFound(table_name.to_string()))?;
+    f(table)
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -44,7 +76,7 @@ mod tests {
         let db = init_db();
         assert_eq!(
             select(&db, Key::Glob, Token::Identifier("people".into())),
-            Frame::Array(vec![Frame::Bulk(Bytes::from("Elliot 16"))])
+            Ok(Frame::Array(vec![Frame::Bulk(Bytes::from("Elliot 16"))]))
         );
         assert_eq!(
             select(
@@ -52,14 +84,14 @@ mod tests {
                 Key::List(vec![Token::Identifier("name".into())]),
                 Token::Identifier("people".into())
             ),
-            Frame::Array(vec![Frame::Bulk(Bytes::from("Elliot"))])
+            Ok(Frame::Array(vec![Frame::Bulk(Bytes::from("Elliot"))]))
         );
     }
 
     #[test]
     fn test_insert() {
         let db = init_db();
-        insert(
+        assert!(insert(
             &db,
             Token::Identifier("people".into()),
             Tokens::List(vec![
@@ -70,8 +102,9 @@ mod tests {
                 LiteralValue::String("Joe".into()),
                 LiteralValue::Number(60.0),
             ],
-        );
-        insert(
+        )
+        .is_ok());
+        assert!(insert(
             &db,
             Token::Identifier("people".into()),
             Tokens::Omitted,
@@ -79,14 +112,15 @@ mod tests {
                 LiteralValue::String("Fredward".into()),
                 LiteralValue::Number(999.0),
             ],
-        );
+        )
+        .is_ok());
         assert_eq!(
             select(&db, Key::Glob, Token::Identifier("people".into())),
-            Frame::Array(vec![
+            Ok(Frame::Array(vec![
                 Frame::Bulk(Bytes::from("Elliot 16")),
                 Frame::Bulk(Bytes::from("Joe 60")),
                 Frame::Bulk(Bytes::from("Fredward 999")),
-            ])
+            ]))
         );
     }
 
