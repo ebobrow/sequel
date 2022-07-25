@@ -31,7 +31,6 @@ impl From<&LiteralValue> for Bytes {
     }
 }
 
-// TODO: better name
 #[derive(Debug, PartialEq)]
 pub enum Key {
     Glob,

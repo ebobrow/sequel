@@ -40,13 +40,14 @@ pub fn select(db: &Db, key: Key, table: Token) -> CmdResult<Frame> {
 }
 
 fn cols_to_frame<'a>(cols: impl Iterator<Item = &'a Column>) -> Frame {
-    let bytes = cols
+    let mut bytes = cols
         .map(|col| &col.data()[..])
-        .fold(Vec::new(), |mut acc, col| {
-            acc.push(b' ');
+        .fold(vec![b'('], |mut acc, col| {
             acc.append(&mut col.to_vec());
+            acc.push(b' ');
             acc
         });
-    // Prune leading space
-    Frame::Bulk(Bytes::copy_from_slice(&bytes[1..]))
+    bytes.pop();
+    bytes.push(b')');
+    Frame::Bulk(Bytes::copy_from_slice(&bytes[..]))
 }

@@ -41,7 +41,7 @@ where
     let table_name = table.ident().ok_or(CmdError::Internal)?;
     let table = db
         .get(table_name)
-        .ok_or(CmdError::TableNotFound(table_name.to_string()))?;
+        .ok_or_else(|| CmdError::TableNotFound(table_name.to_string()))?;
     f(table)
 }
 
@@ -53,7 +53,7 @@ where
     let table_name = table.ident().ok_or(CmdError::Internal)?;
     let table = db
         .get_mut(table_name)
-        .ok_or(CmdError::TableNotFound(table_name.to_string()))?;
+        .ok_or_else(|| CmdError::TableNotFound(table_name.to_string()))?;
     f(table)
 }
 
