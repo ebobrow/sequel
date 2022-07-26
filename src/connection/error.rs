@@ -6,6 +6,7 @@ pub enum ConnError {
     Incomplete,
     Io(io::Error),
     Reset,
+    Protocol(u8),
 }
 
 impl Debug for ConnError {
@@ -14,6 +15,7 @@ impl Debug for ConnError {
             ConnError::Incomplete => write!(f, "stream ended early"),
             ConnError::Io(err) => err.fmt(f),
             ConnError::Reset => write!(f, "Connection reset by peer"),
+            ConnError::Protocol(c) => write!(f, "Unexpected char: {}", *c as char),
         }
     }
 }

@@ -1,8 +1,6 @@
-use bytes::Bytes;
-
 use crate::{
     connection::Frame,
-    db::{Column, Db},
+    db::Db,
     parse::{Key, Token},
 };
 
@@ -15,11 +13,12 @@ pub fn select(db: &Db, key: Key, table: Token) -> CmdResult<Frame> {
     on_table(db, table, |table| {
         match key {
             // TODO: header on top like "ID | name | age"
-            Key::Glob => Ok(Frame::Array(
+            // but not if i change to server/client stuff
+            Key::Glob => Ok(Frame::Table(
                 table
                     .rows()
                     .iter()
-                    .map(|row| cols_to_frame(row.all_cols()))
+                    .map(|row| row.all_cols().map(|col| col.data().clone()).collect())
                     .collect(),
             )),
             Key::List(cols) => {
@@ -27,27 +26,14 @@ pub fn select(db: &Db, key: Key, table: Token) -> CmdResult<Frame> {
                     .iter()
                     .map(|col| Ok(col.ident().ok_or(CmdError::Internal)?.to_string()))
                     .collect::<CmdResult<Vec<_>>>()?;
-                Ok(Frame::Array(
+                Ok(Frame::Table(
                     table
                         .rows()
                         .iter()
-                        .map(|row| cols_to_frame(row.cols(&names[..])))
+                        .map(|row| row.cols(&names[..]).map(|col| col.data().clone()).collect())
                         .collect(),
                 ))
             }
         }
     })
-}
-
-fn cols_to_frame<'a>(cols: impl Iterator<Item = &'a Column>) -> Frame {
-    let mut bytes = cols
-        .map(|col| &col.data()[..])
-        .fold(vec![b'('], |mut acc, col| {
-            acc.append(&mut col.to_vec());
-            acc.push(b' ');
-            acc
-        });
-    bytes.pop();
-    bytes.push(b')');
-    Frame::Bulk(Bytes::copy_from_slice(&bytes[..]))
 }

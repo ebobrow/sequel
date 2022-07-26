@@ -1,6 +1,6 @@
 use std::io::{self, Cursor};
 
-use bytes::{Buf, BytesMut};
+use bytes::{Buf, Bytes, BytesMut};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, BufWriter},
     net::TcpStream,
@@ -54,26 +54,42 @@ impl Connection {
 
     pub async fn write_frame(&mut self, frame: &Frame) -> io::Result<()> {
         match frame {
-            Frame::Array(arr) => {
-                for el in arr {
-                    self.write_val(el).await?;
-                }
+            Frame::Cmd(cmd) => {
+                self.stream.write_u8(b':').await?;
+                self.stream.write_all(cmd).await?;
             }
-            _ => self.write_val(frame).await?,
-        };
-        self.stream.flush().await
-    }
-
-    async fn write_val(&mut self, frame: &Frame) -> io::Result<()> {
-        match frame {
+            Frame::Table(rows) => {
+                self.stream.write_u8(b'*').await?;
+                if let Some(first_row) = rows.first() {
+                    self.write_table_row(first_row).await?;
+                    for row in &rows[1..] {
+                        self.stream.write_u8(b'^').await?;
+                        self.write_table_row(row).await?;
+                    }
+                }
+                self.stream.write_u8(b'*').await?;
+            }
             Frame::Error(e) => {
                 eprintln!("{}", e);
-                self.stream.write_all(e.as_bytes()).await?
+                self.stream.write_all(e.as_bytes()).await?;
             }
-            Frame::Bulk(bytes) => self.stream.write_all(bytes).await?,
-            Frame::Null => self.stream.write_all(b"$-1").await?,
-            Frame::Array(_) => panic!(),
-        };
-        self.stream.write_all(b"\r\n").await
+            Frame::Null => self.stream.write_all(b"-1").await?,
+        }
+        self.stream.write_all(b"\r\n").await?;
+        self.stream.flush().await?;
+
+        Ok(())
+    }
+
+    async fn write_table_row(&mut self, row: &[Bytes]) -> io::Result<()> {
+        if let Some(first_item) = row.first() {
+            self.stream.write_all(first_item).await?;
+            for item in &row[1..] {
+                self.stream.write_u8(b'|').await?;
+                self.stream.write_all(item).await?;
+            }
+        }
+
+        Ok(())
     }
 }
