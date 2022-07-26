@@ -76,10 +76,10 @@ mod tests {
         let db = init_db();
         assert_eq!(
             select(&db, Key::Glob, Token::Identifier("people".into())),
-            Ok(Frame::Table(vec![vec![
-                Bytes::from("Elliot"),
-                Bytes::from("16")
-            ]]))
+            Ok(Frame::Table(vec![
+                vec![Bytes::from("name"), Bytes::from("age"), Bytes::from("ID")],
+                vec![Bytes::from("Elliot"), Bytes::from("16")]
+            ]))
         );
         assert_eq!(
             select(
@@ -87,7 +87,10 @@ mod tests {
                 Key::List(vec![Token::Identifier("name".into())]),
                 Token::Identifier("people".into())
             ),
-            Ok(Frame::Table(vec![vec![Bytes::from("Elliot")]]))
+            Ok(Frame::Table(vec![
+                vec![Bytes::from("name")],
+                vec![Bytes::from("Elliot")]
+            ]))
         );
     }
 
@@ -120,6 +123,7 @@ mod tests {
         assert_eq!(
             select(&db, Key::Glob, Token::Identifier("people".into())),
             Ok(Frame::Table(vec![
+                vec![Bytes::from("name"), Bytes::from("age"), Bytes::from("ID")],
                 vec![Bytes::from("Elliot"), Bytes::from("16")],
                 vec![Bytes::from("Joe"), Bytes::from("60")],
                 vec![Bytes::from("Fredward"), Bytes::from("999")]
