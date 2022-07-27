@@ -9,6 +9,7 @@ use super::{
     on_table_mut,
 };
 
+// TODO: insert multiple columns
 pub fn insert(db: &Db, table: Token, cols: Tokens, values: Vec<LiteralValue>) -> CmdResult<Frame> {
     on_table_mut(db, table, |table| match cols {
         Tokens::List(cols) => {

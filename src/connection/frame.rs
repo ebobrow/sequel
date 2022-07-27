@@ -1,4 +1,4 @@
-use std::io::Cursor;
+use std::{fmt::Display, io::Cursor};
 
 use bytes::{Buf, Bytes};
 
@@ -68,6 +68,49 @@ impl Frame {
                 }
             }
             c => Err(ConnError::Protocol(c)),
+        }
+    }
+}
+
+impl Display for Frame {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Frame::Cmd(cmd) => write!(f, "{}", std::str::from_utf8(cmd).unwrap()),
+            Frame::Table(rows) => {
+                let mut lengths = Vec::new();
+                for i in 0..rows[0].len() {
+                    lengths.push(rows.iter().map(|row| row[i].len()).max().unwrap());
+                }
+                let stringify_row = |row: &[Bytes]| -> String {
+                    row.iter()
+                        .enumerate()
+                        .map(|(i, col)| {
+                            let stringified = String::from_utf8(col.to_vec()).unwrap();
+                            let padding = lengths[i] - stringified.len();
+                            stringified + &" ".repeat(padding)
+                        })
+                        .collect::<Vec<_>>()
+                        .join("|")
+                };
+
+                writeln!(f, "{}", stringify_row(&rows[0]))?;
+                writeln!(
+                    f,
+                    "{}",
+                    lengths
+                        .iter()
+                        .map(|length| "-".repeat(*length))
+                        .collect::<Vec<_>>()
+                        .join("+")
+                )?;
+                for row in &rows[1..] {
+                    writeln!(f, "{}", stringify_row(row))?;
+                }
+
+                Ok(())
+            }
+            Frame::Error(e) => write!(f, "Error: {}", e),
+            Frame::Null => write!(f, "NULL"),
         }
     }
 }

@@ -1,19 +1,16 @@
+// TODO: move this to src/server.rs and only export `server::run`
 use std::{
     collections::HashMap,
     io,
     sync::{Arc, Mutex},
 };
 
-use bytes::Bytes;
-use command::run_cmd;
-use connection::{Connection, Frame};
-use db::{Column, ColumnHeader, Db, Table};
+use sequel::{
+    connection::{Connection, Frame},
+    db::{ColumnHeader, Db, Table},
+    run_cmd,
+};
 use tokio::net::{TcpListener, TcpStream};
-
-mod command;
-mod connection;
-mod db;
-mod parse;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
@@ -21,18 +18,14 @@ async fn main() -> io::Result<()> {
 
     println!("Listening");
 
-    let db = {
-        let mut table = Table::try_from(vec![
+    let db = Arc::new(Mutex::new(HashMap::from([(
+        "people".into(),
+        Table::try_from(vec![
             ColumnHeader::new("name".into()),
             ColumnHeader::new("age".into()),
         ])
-        .unwrap();
-        table.append(vec![
-            Column::new(Bytes::from("Elliot"), "name".into()),
-            Column::new(Bytes::from("16"), "age".into()),
-        ]);
-        Arc::new(Mutex::new(HashMap::from([("people".into(), table)])))
-    };
+        .unwrap(),
+    )])));
 
     loop {
         let (socket, _) = listener.accept().await?;
@@ -47,8 +40,6 @@ async fn main() -> io::Result<()> {
 
 async fn process(socket: TcpStream, db: Db) {
     let mut connection = Connection::new(socket);
-    // TODO: write some sort of client so that we don't send whole SQL expressions through TCP
-    // and change from `bin` to `lib` and have client and server binaries?
     while let Some(Frame::Cmd(cmd)) = connection.read_frame().await.unwrap() {
         let response = run_cmd(&db, cmd);
         connection.write_frame(&response).await.unwrap();

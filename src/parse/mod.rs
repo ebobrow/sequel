@@ -39,7 +39,7 @@ mod tests {
 
     #[test]
     fn scanner() {
-        let stream = Bytes::from("INSERT 17.6 * (\"one\", \"two\") table");
+        let stream = "INSERT 17.6 * (\"one\", \"two\") table".into();
         let tokens = Scanner::scan(stream).unwrap();
         assert_eq!(
             tokens,
@@ -61,11 +61,11 @@ mod tests {
     #[test]
     fn scanner_err() {
         assert_eq!(
-            Scanner::scan(Bytes::from("#")),
+            Scanner::scan("#".into()),
             Err(ParseError::Unrecognized(b'#'))
         );
         assert_eq!(
-            Scanner::scan(Bytes::from("\"unterminated string")),
+            Scanner::scan("\"unterminated string".into()),
             Err(ParseError::UnexpectedEnd)
         );
     }

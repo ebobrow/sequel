@@ -3,7 +3,13 @@ name = "sequel"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "sequel-client"
+path = "src/bin/client.rs"
+
+[[bin]]
+name = "sequel-server"
+path = "src/bin/server.rs"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }

@@ -77,8 +77,8 @@ mod tests {
         assert_eq!(
             select(&db, Key::Glob, Token::Identifier("people".into())),
             Ok(Frame::Table(vec![
-                vec![Bytes::from("name"), Bytes::from("age"), Bytes::from("ID")],
-                vec![Bytes::from("Elliot"), Bytes::from("16")]
+                vec!["name".into(), "age".into(), "ID".into()],
+                vec!["Elliot".into(), "16".into()]
             ]))
         );
         assert_eq!(
@@ -88,8 +88,8 @@ mod tests {
                 Token::Identifier("people".into())
             ),
             Ok(Frame::Table(vec![
-                vec![Bytes::from("name")],
-                vec![Bytes::from("Elliot")]
+                vec!["name".into()],
+                vec!["Elliot".into()]
             ]))
         );
     }
@@ -123,10 +123,10 @@ mod tests {
         assert_eq!(
             select(&db, Key::Glob, Token::Identifier("people".into())),
             Ok(Frame::Table(vec![
-                vec![Bytes::from("name"), Bytes::from("age"), Bytes::from("ID")],
-                vec![Bytes::from("Elliot"), Bytes::from("16")],
-                vec![Bytes::from("Joe"), Bytes::from("60")],
-                vec![Bytes::from("Fredward"), Bytes::from("999")]
+                vec!["name".into(), "age".into(), "ID".into()],
+                vec!["Elliot".into(), "16".into()],
+                vec!["Joe".into(), "60".into()],
+                vec!["Fredward".into(), "999".into()]
             ]))
         );
     }
@@ -138,8 +138,8 @@ mod tests {
         ])
         .unwrap();
         table.append(vec![
-            Column::new(Bytes::from("Elliot"), "name".into()),
-            Column::new(Bytes::from("16"), "age".into()),
+            Column::new("Elliot".into(), "name".into()),
+            Column::new("16".into(), "age".into()),
         ]);
         Arc::new(Mutex::new(HashMap::from([("people".into(), table)])))
     }
