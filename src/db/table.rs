@@ -61,7 +61,7 @@ impl Table {
         match &primary_col[..] {
             [] => {
                 self.rows.insert(Row::new(
-                    Column::new(Bytes::copy_from_slice(&[self.inc.unwrap()]), "ID".into()),
+                    Column::new(Bytes::from(self.inc.unwrap().to_string()), "ID".into()),
                     cols,
                 ));
                 self.inc = self.inc.map(|i| i + 1);

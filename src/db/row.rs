@@ -15,12 +15,11 @@ impl Row {
     }
 
     pub fn all_cols(&self) -> impl Iterator<Item = &Column> {
-        self.cols.iter()
+        self.cols.iter().chain([&self.primary_key_col])
     }
 
     pub fn cols<'a>(&'a self, names: &'a [String]) -> impl Iterator<Item = &'a Column> {
-        self.cols
-            .iter()
+        self.all_cols()
             .filter(|col| names.iter().any(|name| name == col.name()))
     }
 }
