@@ -71,6 +71,7 @@ impl Connection {
             }
             Frame::Error(e) => {
                 eprintln!("{}", e);
+                self.stream.write_u8(b'-').await?;
                 self.stream.write_all(e.as_bytes()).await?;
             }
             Frame::Null => self.stream.write_all(b"-1").await?,

@@ -85,12 +85,15 @@ impl Display for Frame {
                     row.iter()
                         .enumerate()
                         .map(|(i, col)| {
-                            let stringified = String::from_utf8(col.to_vec()).unwrap();
+                            let mut stringified = String::from_utf8(col.to_vec()).unwrap();
                             let padding = lengths[i] - stringified.len();
+                            if i == 0 {
+                                stringified = format!(" {stringified}");
+                            }
                             stringified + &" ".repeat(padding)
                         })
                         .collect::<Vec<_>>()
-                        .join("|")
+                        .join(" | ")
                 };
 
                 writeln!(f, "{}", stringify_row(&rows[0]))?;
@@ -99,7 +102,7 @@ impl Display for Frame {
                     "{}",
                     lengths
                         .iter()
-                        .map(|length| "-".repeat(*length))
+                        .map(|length| "-".repeat(*length + 2))
                         .collect::<Vec<_>>()
                         .join("+")
                 )?;

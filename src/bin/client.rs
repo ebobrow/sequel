@@ -22,7 +22,6 @@ async fn main() -> io::Result<()> {
         connection.write_frame(&Frame::Cmd(s.into())).await?;
         if let Some(response) = connection.read_frame().await.unwrap() {
             // TODO: it seems `INSERT` after `SELECT` hangs?
-            // TODO: and panics sometimes instead of propogating error
             println!("{}", response);
         }
     }
