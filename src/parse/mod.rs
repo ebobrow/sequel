@@ -18,17 +18,11 @@ mod token;
 pub fn parse(stream: Bytes) -> ParseResult<Expr> {
     let tokens = Scanner::scan(stream)?;
     let mut parser = Parser::new(tokens);
-    let expr = parser.parse();
-    if let Ok(expr) = &expr {
-        println!("{:#?}", expr);
-    }
-    expr
+    parser.parse()
 }
 
 #[cfg(test)]
 mod tests {
-    use bytes::Bytes;
-
     use super::{
         ast::{Expr, Key},
         parser::Parser,
