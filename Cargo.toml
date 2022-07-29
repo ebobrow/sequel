@@ -15,3 +15,4 @@ path = "src/bin/server.rs"
 tokio = { version = "1", features = ["full"] }
 bytes = "1"
 phf = { version = "0.10", features = ["macros"] }
+futures = "0.3"

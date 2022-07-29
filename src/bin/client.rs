@@ -1,24 +1,36 @@
-use std::io::{self, stdin, stdout, Write};
+use std::io::{self, Cursor};
 
-use sequel::connection::{Connection, Frame};
-use tokio::net::TcpStream;
+use futures::{select, FutureExt};
+use sequel::connection::Frame;
+use tokio::{
+    io::{stdin, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
+    net::TcpStream,
+};
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
-    let socket = TcpStream::connect("127.0.0.1:3000").await?;
-    let mut connection = Connection::new(socket);
+    let mut stream = TcpStream::connect("127.0.0.1:3000").await.unwrap();
+    let (mut rd, mut wr) = stream.split();
 
-    print!("SQL> ");
-    stdout().flush()?;
-    for line in stdin().lines() {
-        connection.write_frame(&Frame::Cmd(line?.into())).await?;
-        if let Some(response) = connection.read_frame().await.unwrap() {
-            // TODO: it seems `INSERT` after `SELECT` hangs?
-            println!("{}", response);
+    let mut lines_from_stdin = BufReader::new(stdin()).lines();
+    let mut buf = [0; 4096];
+
+    loop {
+        select! {
+            n = rd.read(&mut buf).fuse() => {
+                let mut cursor = Cursor::new(&buf[..n.unwrap()]);
+                if let Ok(frame) = Frame::parse(&mut cursor) {
+                    println!("{}", frame);
+                }
+            }
+            // TODO: https://github.com/kkawakam/rustyline
+            line = lines_from_stdin.next_line().fuse() => {
+                let line = line?.unwrap();
+                wr.write_u8(b':').await.unwrap();
+                wr.write_all(line.as_bytes()).await.unwrap();
+                wr.write_all(b"\r\n").await.unwrap();
+                wr.flush().await.unwrap();
+            }
         }
-
-        print!("SQL> ");
-        stdout().flush()?;
     }
-    Ok(())
 }
