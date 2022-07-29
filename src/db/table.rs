@@ -57,7 +57,6 @@ impl Table {
             .into_iter()
             .partition(|col| col.name() == self.primary_key_name());
         // TODO: errors
-        // TODO: null value for missing cols (some sort of `Value` enum or reuse `LiteralValue`)
         match &primary_col[..] {
             [] => {
                 self.rows.insert(Row::new(
@@ -85,5 +84,9 @@ impl Table {
 
     pub fn col_headers(&self) -> &[ColumnHeader] {
         self.col_headers.as_ref()
+    }
+
+    pub fn non_primary_keys(&self) -> impl Iterator<Item = &ColumnHeader> {
+        self.col_headers.iter().filter(|col| !col.is_primary())
     }
 }

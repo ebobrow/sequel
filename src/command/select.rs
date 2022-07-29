@@ -32,7 +32,6 @@ pub fn select(db: &Db, key: Key, table: Token) -> CmdResult<Frame> {
                 .iter()
                 .map(|col| Ok(col.ident().ok_or(CmdError::Internal)?.to_string()))
                 .collect::<CmdResult<Vec<_>>>()?;
-            // TODO: Something going wrong here (I think with the `impl Display`)
             let mut contents: Vec<Vec<_>> = table
                 .rows()
                 .iter()

@@ -7,6 +7,7 @@ use tokio::{
     net::TcpStream,
 };
 
+// TODO: use `Connection`?
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let mut stream = TcpStream::connect("127.0.0.1:3000").await.unwrap();

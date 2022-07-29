@@ -27,10 +27,7 @@ pub fn run_cmd(db: &Db, stream: Bytes) -> Frame {
         }) => insert(db, table, cols, values),
         Err(e) => return Frame::Error(format!("{:?}", e)),
     };
-    match res {
-        Ok(frame) => frame,
-        Err(e) => Frame::Error(format!("{:?}", e)),
-    }
+    res.unwrap_or_else(|e| Frame::Error(format!("{:?}", e)))
 }
 
 fn on_table<F>(db: &Db, table: Token, f: F) -> CmdResult<Frame>

@@ -7,6 +7,7 @@ pub enum CmdError {
     // e.g. `table` Token is always parsed as `Token::Identifier`; should never error
     Internal,
     TableNotFound(String),
+    User(String),
 }
 
 impl Debug for CmdError {
@@ -14,6 +15,7 @@ impl Debug for CmdError {
         match self {
             Self::Internal => write!(f, "Internal Error"),
             Self::TableNotFound(table) => write!(f, "Table \"{}\" not found", table),
+            Self::User(msg) => write!(f, "{}", msg),
         }
     }
 }
