@@ -20,11 +20,7 @@ mod select;
 pub fn run_cmd(db: &Db, stream: Bytes) -> Frame {
     let res = match parse::parse(stream) {
         Ok(Expr::Select { key, table }) => select(db, key, table),
-        Ok(Expr::Insert {
-            table,
-            cols,
-            values,
-        }) => insert(db, table, cols, values),
+        Ok(Expr::Insert { table, cols, rows }) => insert(db, table, cols, rows),
         Err(e) => return Frame::Error(format!("{:?}", e)),
     };
     res.unwrap_or_else(|e| Frame::Error(format!("{:?}", e)))
@@ -75,7 +71,7 @@ mod tests {
             select(&db, Key::Glob, Token::Identifier("people".into())),
             Ok(Frame::Table(vec![
                 vec!["name".into(), "age".into(), "ID".into()],
-                vec!["Elliot".into(), "16".into()]
+                vec!["Elliot".into(), "16".into(), "0".into()],
             ]))
         );
         assert_eq!(
@@ -86,7 +82,7 @@ mod tests {
             ),
             Ok(Frame::Table(vec![
                 vec!["name".into()],
-                vec!["Elliot".into()]
+                vec!["Elliot".into()],
             ]))
         );
     }
@@ -101,30 +97,65 @@ mod tests {
                 Token::Identifier("name".into()),
                 Token::Identifier("age".into()),
             ]),
-            vec![
+            vec![vec![
                 LiteralValue::String("Joe".into()),
                 LiteralValue::Number(60.0),
-            ],
+            ]],
         )
         .is_ok());
         assert!(insert(
             &db,
             Token::Identifier("people".into()),
             Tokens::Omitted,
-            vec![
+            vec![vec![
                 LiteralValue::String("Fredward".into()),
                 LiteralValue::Number(999.0),
-            ],
+            ]],
         )
         .is_ok());
         assert_eq!(
             select(&db, Key::Glob, Token::Identifier("people".into())),
             Ok(Frame::Table(vec![
                 vec!["name".into(), "age".into(), "ID".into()],
-                vec!["Elliot".into(), "16".into()],
-                vec!["Joe".into(), "60".into()],
-                vec!["Fredward".into(), "999".into()]
+                vec!["Elliot".into(), "16".into(), "0".into()],
+                vec!["Joe".into(), "60".into(), "1".into()],
+                vec!["Fredward".into(), "999".into(), "2".into()],
             ]))
+        );
+    }
+
+    #[test]
+    fn insert_wrong_num_cols() {
+        let db = init_db();
+        assert!(insert(
+            &db,
+            Token::Identifier("people".into()),
+            Tokens::Omitted,
+            vec![vec![LiteralValue::String("Elliot".into())]],
+        )
+        .is_ok());
+        assert_eq!(
+            select(&db, Key::Glob, Token::Identifier("people".into())),
+            Ok(Frame::Table(vec![
+                vec!["name".into(), "age".into(), "ID".into()],
+                vec!["Elliot".into(), "16".into(), "0".into()],
+                vec!["Elliot".into(), Bytes::new(), "1".into()],
+            ]))
+        );
+
+        assert_eq!(
+            insert(
+                &db,
+                Token::Identifier("people".into()),
+                Tokens::Omitted,
+                vec![vec![
+                    LiteralValue::Number(1.0),
+                    LiteralValue::Number(2.0),
+                    LiteralValue::Number(3.0),
+                    LiteralValue::Number(4.0)
+                ]]
+            ),
+            Err(CmdError::User("too many values supplied".into()))
         );
     }
 

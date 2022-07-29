@@ -35,12 +35,8 @@ impl Parser {
         let table = self.consume_ident()?.clone();
         let cols = self.tokens()?;
         self.consume(&Token::Values)?;
-        let values = self.values()?;
-        Ok(Expr::Insert {
-            table,
-            cols,
-            values,
-        })
+        let rows = self.rows()?;
+        Ok(Expr::Insert { table, cols, rows })
     }
 
     fn select(&mut self) -> ParseResult<Expr> {
@@ -77,6 +73,15 @@ impl Parser {
             tokens.push(self.consume_ident()?.clone())
         }
         Ok(tokens)
+    }
+
+    fn rows(&mut self) -> ParseResult<Vec<Vec<LiteralValue>>> {
+        let first = self.values()?;
+        let mut rows = vec![first];
+        while self.consume(&Token::Comma).is_ok() {
+            rows.push(self.values()?);
+        }
+        Ok(rows)
     }
 
     fn values(&mut self) -> ParseResult<Vec<LiteralValue>> {

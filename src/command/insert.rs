@@ -11,45 +11,63 @@ use super::{
     on_table_mut,
 };
 
-// TODO: insert multiple columns
-pub fn insert(db: &Db, table: Token, cols: Tokens, values: Vec<LiteralValue>) -> CmdResult<Frame> {
+pub fn insert(
+    db: &Db,
+    table: Token,
+    cols: Tokens,
+    rows: Vec<Vec<LiteralValue>>,
+) -> CmdResult<Frame> {
     on_table_mut(db, table, |table| match cols {
         Tokens::List(cols) => {
-            let mut columns = Vec::new();
-            for (c, val) in cols.iter().zip(values.iter()) {
-                columns.push(Column::new(
-                    val.into(),
-                    c.ident().ok_or(CmdError::Internal)?.to_string(),
-                ));
-            }
-            if columns.len() < cols.len() {
-                for omitted_col in &cols[columns.len()..] {
+            for values in rows {
+                let mut columns = Vec::new();
+                for (c, val) in cols.iter().zip(values.iter()) {
                     columns.push(Column::new(
-                        Bytes::new(),
-                        omitted_col.ident().ok_or(CmdError::Internal)?.to_string(),
-                    ))
+                        val.into(),
+                        c.ident().ok_or(CmdError::Internal)?.to_string(),
+                    ));
                 }
-            } else if columns.len() > cols.len() {
-                return Err(CmdError::User("too many values supplied".into()));
+                // TODO: This doesn't work with `INSERT INTO people (name, ID) VALUES ("Elliot", 0)`
+                // and `INSERT INTO people (name, age, ID) VALUES ("Elliot", 16)`
+                check_row_length(
+                    &mut columns,
+                    cols.iter()
+                        .map(|col| col.ident())
+                        .collect::<Option<Vec<_>>>()
+                        .ok_or(CmdError::Internal)?,
+                )?;
+                table.append(columns)?;
             }
-            table.append(columns)?;
             Ok(Frame::Null)
         }
         Tokens::Omitted => {
-            let mut columns = Vec::new();
-            for (c, val) in table.col_headers().iter().zip(values.iter()) {
-                columns.push(Column::new(val.into(), c.name().to_string()));
-            }
-            let non_primary_keys: Vec<_> = table.non_primary_keys().collect();
-            if columns.len() < non_primary_keys.len() {
-                for omitted_col in &non_primary_keys[columns.len()..] {
-                    columns.push(Column::new(Bytes::new(), omitted_col.name().to_string()))
+            for values in rows {
+                let mut columns = Vec::new();
+                for (c, val) in table.col_headers().iter().zip(values.iter()) {
+                    columns.push(Column::new(val.into(), c.name().to_string()));
                 }
-            } else if columns.len() > non_primary_keys.len() {
-                return Err(CmdError::User("too many values supplied".into()));
+                check_row_length(
+                    &mut columns,
+                    table
+                        .non_primary_keys()
+                        .into_iter()
+                        .map(|col| col.name())
+                        .collect(),
+                )?;
+                table.append(columns)?;
             }
-            table.append(columns)?;
             Ok(Frame::Null)
         }
     })
+}
+
+fn check_row_length(input: &mut Vec<Column>, expected: Vec<impl ToString>) -> CmdResult<()> {
+    if input.len() < expected.len() {
+        for omitted_col in &expected[input.len()..] {
+            input.push(Column::new(Bytes::new(), omitted_col.to_string()));
+        }
+    } else if input.len() > expected.len() {
+        return Err(CmdError::User("too many values supplied".into()));
+    }
+    Ok(())
 }

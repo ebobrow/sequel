@@ -11,7 +11,7 @@ pub enum Expr {
     Insert {
         table: Token,
         cols: Tokens,
-        values: Vec<LiteralValue>,
+        rows: Vec<Vec<LiteralValue>>,
     },
 }
 

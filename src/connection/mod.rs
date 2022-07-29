@@ -19,10 +19,10 @@ mod tests {
             vec!["Elliot".into(), "16".into()],
             vec!["Aurelius".into(), "0".into()],
         ]);
-        let expected = r#"Name    |Age
---------+---
-Elliot  |16 
-Aurelius|0  
+        let expected = r#" Name     | Age
+----------+-----
+ Elliot   | 16 
+ Aurelius | 0  
 "#;
         assert_eq!(format!("{table}"), expected);
     }
