@@ -32,7 +32,7 @@ pub fn insert(db: &Db, table: Token, cols: Tokens, values: Vec<LiteralValue>) ->
             } else if columns.len() > cols.len() {
                 return Err(CmdError::User("too many values supplied".into()));
             }
-            table.append(columns);
+            table.append(columns)?;
             Ok(Frame::Null)
         }
         Tokens::Omitted => {
@@ -48,7 +48,7 @@ pub fn insert(db: &Db, table: Token, cols: Tokens, values: Vec<LiteralValue>) ->
             } else if columns.len() > non_primary_keys.len() {
                 return Err(CmdError::User("too many values supplied".into()));
             }
-            table.append(columns);
+            table.append(columns)?;
             Ok(Frame::Null)
         }
     })

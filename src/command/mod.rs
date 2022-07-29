@@ -134,10 +134,12 @@ mod tests {
             ColumnHeader::new("age".into()),
         ])
         .unwrap();
-        table.append(vec![
-            Column::new("Elliot".into(), "name".into()),
-            Column::new("16".into(), "age".into()),
-        ]);
+        table
+            .append(vec![
+                Column::new("Elliot".into(), "name".into()),
+                Column::new("16".into(), "age".into()),
+            ])
+            .unwrap();
         Arc::new(Mutex::new(HashMap::from([("people".into(), table)])))
     }
 }

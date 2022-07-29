@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use crate::db::DbError;
+
 pub type CmdResult<T> = Result<T, CmdError>;
 
 #[derive(PartialEq)]
@@ -8,6 +10,7 @@ pub enum CmdError {
     Internal,
     TableNotFound(String),
     User(String),
+    Db(DbError),
 }
 
 impl Debug for CmdError {
@@ -16,6 +19,13 @@ impl Debug for CmdError {
             Self::Internal => write!(f, "Internal Error"),
             Self::TableNotFound(table) => write!(f, "Table \"{}\" not found", table),
             Self::User(msg) => write!(f, "{}", msg),
+            Self::Db(err) => write!(f, "{:?}", err),
         }
+    }
+}
+
+impl From<DbError> for CmdError {
+    fn from(e: DbError) -> Self {
+        Self::Db(e)
     }
 }
