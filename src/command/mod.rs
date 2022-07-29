@@ -25,11 +25,11 @@ pub fn run_cmd(db: &Db, stream: Bytes) -> Frame {
             cols,
             values,
         }) => insert(db, table, cols, values),
-        Err(e) => Err(CmdError::Other(format!("{:?}", e))),
+        Err(e) => return Frame::Error(format!("{:?}", e)),
     };
     match res {
         Ok(frame) => frame,
-        Err(e) => Frame::Error(format!("Error:\n{:?}", e)),
+        Err(e) => Frame::Error(format!("{:?}", e)),
     }
 }
 

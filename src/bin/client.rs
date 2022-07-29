@@ -1,4 +1,4 @@
-use std::io::{self, Cursor};
+use std::io::{self, stdout, Cursor, Write};
 
 use futures::{select, FutureExt};
 use sequel::connection::Frame;
@@ -15,6 +15,7 @@ async fn main() -> io::Result<()> {
     let mut lines_from_stdin = BufReader::new(stdin()).lines();
     let mut buf = [0; 4096];
 
+    print_prompt()?;
     loop {
         select! {
             n = rd.read(&mut buf).fuse() => {
@@ -22,6 +23,7 @@ async fn main() -> io::Result<()> {
                 if let Ok(frame) = Frame::parse(&mut cursor) {
                     println!("{}", frame);
                 }
+                print_prompt()?;
             }
             // TODO: https://github.com/kkawakam/rustyline
             line = lines_from_stdin.next_line().fuse() => {
@@ -33,4 +35,10 @@ async fn main() -> io::Result<()> {
             }
         }
     }
+}
+
+fn print_prompt() -> io::Result<()> {
+    print!("SQL> ");
+    stdout().flush()?;
+    Ok(())
 }

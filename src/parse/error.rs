@@ -18,11 +18,11 @@ impl Debug for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Unexpected { expected, got } => {
-                let mut msg = format!("Expected one of: {:?}", expected[0]);
+                let mut msg = format!("expected one of: {:?}", expected[0]);
                 for ty in &expected[1..] {
                     msg.push_str(&format!(", {:?}", ty)[..]);
                 }
-                write!(f, "{}\nGot: {:#?}", msg, got)
+                write!(f, "Unexpected token: `{}`; {}", got.ident().unwrap(), msg)
             }
             Self::UnexpectedEnd => write!(f, "Unexpected end of file"),
             Self::Unrecognized(c) => write!(f, "Unrecognized token {:?}", *c as char),

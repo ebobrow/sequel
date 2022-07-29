@@ -112,6 +112,7 @@ impl Display for Frame {
 
                 Ok(())
             }
+            // TODO: make this like red or something
             Frame::Error(e) => write!(f, "Error: {}", e),
             Frame::Null => write!(f, "NULL"),
         }
