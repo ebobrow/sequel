@@ -14,7 +14,7 @@ use super::{
 pub fn select(db: &Db, key: Key, table: Token) -> CmdResult<Frame> {
     on_table(db, table, |table| match key {
         Key::Glob => {
-            // TODO: make sure same order
+            // TODO: make sure same order and then add test for default column
             let headers: Vec<_> = table
                 .col_headers()
                 .iter()

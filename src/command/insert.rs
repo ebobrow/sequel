@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use bytes::Bytes;
 
 use crate::{
@@ -18,22 +20,17 @@ pub fn insert(
     rows: Vec<Vec<LiteralValue>>,
 ) -> CmdResult<Frame> {
     on_table_mut(db, table, |table| match cols {
-        Tokens::List(cols) => {
-            let col_names = cols
+        Tokens::List(specified_cols) => {
+            let specified_col_names = specified_cols
                 .iter()
                 .map(|col| col.ident())
                 .collect::<Option<Vec<_>>>()
                 .ok_or(CmdError::Internal)?;
-            let unknown_cols: Vec<_> = col_names
+            let unknown_cols: Vec<_> = specified_col_names
                 .iter()
-                .filter(|col| {
-                    table
-                        .visible_keys()
-                        .find(|header| header.name() == **col)
-                        .is_none()
-                })
+                .filter(|col| !table.visible_keys().any(|header| header.name() == **col))
                 .collect();
-            if unknown_cols.len() > 0 {
+            if !unknown_cols.is_empty() {
                 return Err(CmdError::User(format!(
                     "Unknown columns: {:?}",
                     unknown_cols,
@@ -41,30 +38,34 @@ pub fn insert(
             }
             for values in rows {
                 let mut columns = Vec::new();
-                for (name, val) in col_names.iter().zip(values.iter()) {
+                for (name, val) in specified_col_names.iter().zip(values.iter()) {
                     columns.push(Column::new(val.into(), name.to_string()));
                 }
-                if columns.len() < cols.len() {
-                    for mut omitted_col in col_names
-                        .iter()
-                        .map(|name| {
-                            table
-                                .col_headers()
-                                .iter()
-                                .find(|header| header.name() == *name)
-                                .unwrap()
-                                .clone()
-                        })
-                        .skip(columns.len())
-                    {
-                        columns.push(get_default(&mut omitted_col)?);
+                match columns.len().cmp(&specified_cols.len()) {
+                    Ordering::Less => {
+                        for mut omitted_col in specified_col_names
+                            .iter()
+                            .map(|name| {
+                                table
+                                    .col_headers()
+                                    .iter()
+                                    .find(|header| header.name() == *name)
+                                    .unwrap()
+                                    .clone()
+                            })
+                            .skip(columns.len())
+                        {
+                            columns.push(get_default(&mut omitted_col)?);
+                        }
                     }
-                } else if columns.len() > cols.len() {
-                    return Err(CmdError::User("too many values supplied".into()));
-                }
+                    Ordering::Greater => {
+                        return Err(CmdError::User("too many values supplied".into()));
+                    }
+                    Ordering::Equal => {}
+                };
                 for default_col in table.col_headers_mut().iter_mut().filter(|col| {
                     col.default() != &DefaultOpt::None
-                        && !col_names.contains(&&col.name().to_string())
+                        && !specified_col_names.contains(&&col.name().to_string())
                 }) {
                     columns.push(get_default(default_col)?);
                 }
@@ -78,13 +79,17 @@ pub fn insert(
                 for (c, val) in table.col_headers().iter().zip(values.iter()) {
                     columns.push(Column::new(val.into(), c.name().to_string()));
                 }
-                if columns.len() < table.visible_keys().count() {
-                    for omitted_col in table.visible_keys_mut().skip(columns.len()) {
-                        columns.push(get_default(omitted_col)?);
+                match columns.len().cmp(&table.visible_keys().count()) {
+                    Ordering::Less => {
+                        for omitted_col in table.visible_keys_mut().skip(columns.len()) {
+                            columns.push(get_default(omitted_col)?);
+                        }
                     }
-                } else if columns.len() > table.visible_keys().count() {
-                    return Err(CmdError::User("too many values supplied".into()));
-                }
+                    Ordering::Greater => {
+                        return Err(CmdError::User("too many values supplied".into()));
+                    }
+                    Ordering::Equal => {}
+                };
                 table.append(columns)?;
             }
             Ok(Frame::Null)
