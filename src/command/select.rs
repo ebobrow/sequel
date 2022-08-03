@@ -14,16 +14,20 @@ use super::{
 pub fn select(db: &Db, key: Key, table: Token) -> CmdResult<Frame> {
     on_table(db, table, |table| match key {
         Key::Glob => {
-            // TODO: make sure same order and then add test for default column
             let headers: Vec<_> = table
                 .col_headers()
                 .iter()
                 .map(|header| Bytes::copy_from_slice(header.name().as_bytes()))
                 .collect();
+            let header_names: Vec<_> = table
+                .col_headers()
+                .iter()
+                .map(|header| header.name().to_string())
+                .collect();
             let mut contents: Vec<Vec<_>> = table
                 .rows()
                 .iter()
-                .map(|row| row.all_cols().map(|col| col.data().clone()).collect())
+                .map(|row| row.cols(&header_names[..]))
                 .collect();
             contents.insert(0, headers);
             Ok(Frame::Table(contents))
@@ -36,7 +40,7 @@ pub fn select(db: &Db, key: Key, table: Token) -> CmdResult<Frame> {
             let mut contents: Vec<Vec<_>> = table
                 .rows()
                 .iter()
-                .map(|row| row.cols(&names[..]).map(|col| col.data().clone()).collect())
+                .map(|row| row.cols(&names[..]))
                 .collect();
             contents.insert(0, names.into_iter().map(Bytes::from).collect());
             Ok(Frame::Table(contents))

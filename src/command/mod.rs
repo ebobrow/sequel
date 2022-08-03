@@ -159,6 +159,48 @@ mod tests {
         );
     }
 
+    #[test]
+    fn default_opts() {
+        let db: Db = Arc::new(Mutex::new(HashMap::from([(
+            "table".into(),
+            Table::try_from(vec![
+                ColumnHeader::new("three".into(), DefaultOpt::Some("3".into())),
+                ColumnHeader::new("inc".into(), DefaultOpt::Incrementing(11)),
+            ])
+            .unwrap(),
+        )])));
+        assert!(insert(
+            &db,
+            Token::Identifier("table".into()),
+            Tokens::Omitted,
+            vec![vec![]]
+        )
+        .is_ok());
+        assert!(insert(
+            &db,
+            Token::Identifier("table".into()),
+            Tokens::List(vec![Token::Identifier("three".into())]),
+            vec![vec![LiteralValue::String("not 3".into())]]
+        )
+        .is_ok());
+
+        assert_eq!(
+            select(
+                &db,
+                Key::List(vec![
+                    Token::Identifier("three".into()),
+                    Token::Identifier("inc".into())
+                ]),
+                Token::Identifier("table".into())
+            ),
+            Ok(Frame::Table(vec![
+                vec!["three".into(), "inc".into()],
+                vec!["3".into(), "11".into()],
+                vec!["not 3".into(), "12".into()],
+            ]))
+        );
+    }
+
     fn init_db() -> Db {
         let mut table = Table::try_from(vec![
             ColumnHeader::new("name".into(), DefaultOpt::None),

@@ -14,13 +14,25 @@ impl Row {
         }
     }
 
-    pub fn all_cols(&self) -> impl Iterator<Item = &Column> {
-        self.cols.iter().chain([&self.primary_key_col])
-    }
-
-    pub fn cols<'a>(&'a self, names: &'a [String]) -> impl Iterator<Item = &'a Column> {
-        self.all_cols()
-            .filter(|col| names.iter().any(|name| name == col.name()))
+    pub fn cols(&self, names: &[String]) -> Vec<Bytes> {
+        let mut cols = Vec::new();
+        let all_col_names = self
+            .cols
+            .clone()
+            .into_iter()
+            .chain([self.primary_key_col.clone()]);
+        for name in names {
+            cols.push(
+                all_col_names
+                    .clone()
+                    .find(|col| col.name() == name)
+                    // TODO: error--feels weird having separate db and command errors. consolidate
+                    // or remove both and just use strings?
+                    .unwrap()
+                    .data,
+            );
+        }
+        cols
     }
 }
 
