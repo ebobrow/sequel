@@ -5,7 +5,7 @@ use std::{
 
 pub use self::{
     error::DbError,
-    row::{Column, ColumnHeader, Row},
+    row::{Column, ColumnHeader, DefaultOpt, Row},
     table::Table,
 };
 

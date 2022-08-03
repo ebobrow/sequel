@@ -1,6 +1,6 @@
 use bytes::Bytes;
 
-#[derive(Eq)]
+#[derive(Eq, Debug)]
 pub struct Row {
     primary_key_col: Column,
     cols: Vec<Column>,
@@ -42,25 +42,46 @@ impl Ord for Row {
     }
 }
 
-// TODO: designate incrementing, default
+#[derive(Clone, PartialEq)]
+pub enum DefaultOpt {
+    None,
+    Some(Bytes),
+    Incrementing(u8),
+}
+
 #[derive(Clone)]
 pub struct ColumnHeader {
     name: String,
     is_primary_key: bool,
+    is_hidden: bool,
+    default: DefaultOpt,
 }
 
 impl ColumnHeader {
-    pub fn new(name: String) -> ColumnHeader {
+    pub fn new(name: String, default: DefaultOpt) -> ColumnHeader {
         ColumnHeader {
             name,
             is_primary_key: false,
+            is_hidden: false,
+            default,
         }
     }
 
-    pub fn new_prinary(name: String) -> ColumnHeader {
+    pub fn new_prinary(name: String, default: DefaultOpt) -> ColumnHeader {
         ColumnHeader {
             name,
             is_primary_key: true,
+            is_hidden: false,
+            default,
+        }
+    }
+
+    pub fn new_hidden() -> ColumnHeader {
+        ColumnHeader {
+            name: "ID".into(),
+            is_primary_key: true,
+            is_hidden: true,
+            default: DefaultOpt::Incrementing(0),
         }
     }
 
@@ -71,9 +92,26 @@ impl ColumnHeader {
     pub fn name(&self) -> &str {
         self.name.as_ref()
     }
+
+    pub fn default(&self) -> &DefaultOpt {
+        &self.default
+    }
+
+    pub fn inc(&mut self) -> Option<u8> {
+        if let DefaultOpt::Incrementing(i) = self.default {
+            self.default = DefaultOpt::Incrementing(i + 1);
+            Some(i)
+        } else {
+            None
+        }
+    }
+
+    pub fn is_hidden(&self) -> bool {
+        self.is_hidden
+    }
 }
 
-#[derive(Eq, Clone)]
+#[derive(Eq, Clone, Debug)]
 pub struct Column {
     data: Bytes,
     name: String, // Should correspond with name in `ColumnHeader`

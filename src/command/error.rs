@@ -1,3 +1,4 @@
+// TODO: this is probably stupid and pointless, just send Frame::Error from command
 use std::fmt::Debug;
 
 use crate::db::DbError;

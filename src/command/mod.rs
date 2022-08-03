@@ -58,7 +58,7 @@ mod tests {
     };
 
     use crate::{
-        db::{Column, ColumnHeader, Table},
+        db::{Column, ColumnHeader, DefaultOpt, Table},
         parse::{Key, LiteralValue, Token, Tokens},
     };
 
@@ -161,8 +161,8 @@ mod tests {
 
     fn init_db() -> Db {
         let mut table = Table::try_from(vec![
-            ColumnHeader::new("name".into()),
-            ColumnHeader::new("age".into()),
+            ColumnHeader::new("name".into(), DefaultOpt::None),
+            ColumnHeader::new("age".into(), DefaultOpt::None),
         ])
         .unwrap();
         table

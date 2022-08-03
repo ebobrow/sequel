@@ -11,7 +11,6 @@ use super::{
 pub struct Table {
     col_headers: Vec<ColumnHeader>,
     rows: BTreeSet<Row>,
-    inc: Option<u8>,
 }
 
 impl TryFrom<Vec<ColumnHeader>> for Table {
@@ -30,17 +29,15 @@ impl TryFrom<Vec<ColumnHeader>> for Table {
             0 => {
                 // If no primary key, create hidden auto incrementing
                 let mut col_headers = cols;
-                col_headers.push(ColumnHeader::new_prinary("ID".into()));
+                col_headers.push(ColumnHeader::new_hidden());
                 Ok(Table {
                     col_headers,
                     rows: BTreeSet::new(),
-                    inc: Some(0),
                 })
             }
             1 => Ok(Table {
                 col_headers: cols,
                 rows: BTreeSet::new(),
-                inc: None,
             }),
             n => Err(DbError::Creation(format!(
                 "Expected 1 primary key, found {}",
@@ -58,17 +55,17 @@ impl Table {
     pub fn append(&mut self, cols: Vec<Column>) -> DbResult<()> {
         let (primary_col, cols): (Vec<_>, Vec<_>) = cols
             .into_iter()
-            .partition(|col| col.name() == self.primary_key_name());
+            .partition(|col| col.name() == self.primary_key().name());
         match &primary_col[..] {
             [] => {
-                self.rows.insert(Row::new(
-                    Column::new(
-                        Bytes::from(self.inc.ok_or(DbError::Internal)?.to_string()),
-                        "ID".into(),
-                    ),
-                    cols,
-                ));
-                self.inc = self.inc.map(|i| i + 1);
+                let val = Bytes::from(
+                    self.primary_key_mut()
+                        .inc()
+                        .ok_or(DbError::Internal)?
+                        .to_string(),
+                );
+                self.rows
+                    .insert(Row::new(Column::new(val, "ID".into()), cols));
             }
             [primary_col] => {
                 self.rows.insert(Row::new(primary_col.clone(), cols));
@@ -78,21 +75,35 @@ impl Table {
         Ok(())
     }
 
-    // TODO: store this as field to avoid so many iterations?
-    fn primary_key_name(&self) -> String {
+    fn primary_key(&self) -> &ColumnHeader {
         self.col_headers
             .iter()
             .find(|col| col.is_primary())
             .unwrap()
-            .name()
-            .into()
+    }
+
+    fn primary_key_mut(&mut self) -> &mut ColumnHeader {
+        self.col_headers
+            .iter_mut()
+            .find(|col| col.is_primary())
+            .unwrap()
     }
 
     pub fn col_headers(&self) -> &[ColumnHeader] {
         self.col_headers.as_ref()
     }
 
-    pub fn non_primary_keys(&self) -> impl Iterator<Item = &ColumnHeader> {
-        self.col_headers.iter().filter(|col| !col.is_primary())
+    pub fn col_headers_mut(&mut self) -> &mut [ColumnHeader] {
+        self.col_headers.as_mut()
+    }
+
+    pub fn visible_keys(&self) -> impl Iterator<Item = &ColumnHeader> {
+        self.col_headers().iter().filter(|col| !col.is_hidden())
+    }
+
+    pub fn visible_keys_mut(&mut self) -> impl Iterator<Item = &mut ColumnHeader> {
+        self.col_headers_mut()
+            .iter_mut()
+            .filter(|col| !col.is_hidden())
     }
 }

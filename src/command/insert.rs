@@ -2,7 +2,7 @@ use bytes::Bytes;
 
 use crate::{
     connection::Frame,
-    db::{Column, Db},
+    db::{Column, ColumnHeader, Db, DefaultOpt},
     parse::{LiteralValue, Token, Tokens},
 };
 
@@ -19,23 +19,55 @@ pub fn insert(
 ) -> CmdResult<Frame> {
     on_table_mut(db, table, |table| match cols {
         Tokens::List(cols) => {
+            let col_names = cols
+                .iter()
+                .map(|col| col.ident())
+                .collect::<Option<Vec<_>>>()
+                .ok_or(CmdError::Internal)?;
+            let unknown_cols: Vec<_> = col_names
+                .iter()
+                .filter(|col| {
+                    table
+                        .visible_keys()
+                        .find(|header| header.name() == **col)
+                        .is_none()
+                })
+                .collect();
+            if unknown_cols.len() > 0 {
+                return Err(CmdError::User(format!(
+                    "Unknown columns: {:?}",
+                    unknown_cols,
+                )));
+            }
             for values in rows {
                 let mut columns = Vec::new();
-                for (c, val) in cols.iter().zip(values.iter()) {
-                    columns.push(Column::new(
-                        val.into(),
-                        c.ident().ok_or(CmdError::Internal)?.to_string(),
-                    ));
+                for (name, val) in col_names.iter().zip(values.iter()) {
+                    columns.push(Column::new(val.into(), name.to_string()));
                 }
-                // TODO: This doesn't work with `INSERT INTO people (name, ID) VALUES ("Elliot", 0)`
-                // and `INSERT INTO people (name, age, ID) VALUES ("Elliot", 16)`
-                check_row_length(
-                    &mut columns,
-                    cols.iter()
-                        .map(|col| col.ident())
-                        .collect::<Option<Vec<_>>>()
-                        .ok_or(CmdError::Internal)?,
-                )?;
+                if columns.len() < cols.len() {
+                    for mut omitted_col in col_names
+                        .iter()
+                        .map(|name| {
+                            table
+                                .col_headers()
+                                .iter()
+                                .find(|header| header.name() == *name)
+                                .unwrap()
+                                .clone()
+                        })
+                        .skip(columns.len())
+                    {
+                        columns.push(get_default(&mut omitted_col)?);
+                    }
+                } else if columns.len() > cols.len() {
+                    return Err(CmdError::User("too many values supplied".into()));
+                }
+                for default_col in table.col_headers_mut().iter_mut().filter(|col| {
+                    col.default() != &DefaultOpt::None
+                        && !col_names.contains(&&col.name().to_string())
+                }) {
+                    columns.push(get_default(default_col)?);
+                }
                 table.append(columns)?;
             }
             Ok(Frame::Null)
@@ -46,14 +78,13 @@ pub fn insert(
                 for (c, val) in table.col_headers().iter().zip(values.iter()) {
                     columns.push(Column::new(val.into(), c.name().to_string()));
                 }
-                check_row_length(
-                    &mut columns,
-                    table
-                        .non_primary_keys()
-                        .into_iter()
-                        .map(|col| col.name())
-                        .collect(),
-                )?;
+                if columns.len() < table.visible_keys().count() {
+                    for omitted_col in table.visible_keys_mut().skip(columns.len()) {
+                        columns.push(get_default(omitted_col)?);
+                    }
+                } else if columns.len() > table.visible_keys().count() {
+                    return Err(CmdError::User("too many values supplied".into()));
+                }
                 table.append(columns)?;
             }
             Ok(Frame::Null)
@@ -61,13 +92,13 @@ pub fn insert(
     })
 }
 
-fn check_row_length(input: &mut Vec<Column>, expected: Vec<impl ToString>) -> CmdResult<()> {
-    if input.len() < expected.len() {
-        for omitted_col in &expected[input.len()..] {
-            input.push(Column::new(Bytes::new(), omitted_col.to_string()));
+fn get_default(header: &mut ColumnHeader) -> CmdResult<Column> {
+    let val = match header.default() {
+        DefaultOpt::None => Bytes::new(),
+        DefaultOpt::Some(val) => val.clone(),
+        DefaultOpt::Incrementing(_) => {
+            Bytes::from(header.inc().ok_or(CmdError::Internal)?.to_string())
         }
-    } else if input.len() > expected.len() {
-        return Err(CmdError::User("too many values supplied".into()));
-    }
-    Ok(())
+    };
+    Ok(Column::new(val, header.name().to_string()))
 }
