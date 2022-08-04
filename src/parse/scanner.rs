@@ -1,7 +1,8 @@
+use anyhow::{anyhow, bail, Result};
 use bytes::Bytes;
 use phf::phf_map;
 
-use super::{token::Token, ParseError, ParseResult};
+use super::{error::ERROR_EOF, token::Token};
 
 static KEYWORDS: phf::Map<&'static [u8], Token> = phf_map! {
     b"INSERT" => Token::Insert,
@@ -19,7 +20,7 @@ pub struct Scanner {
 }
 
 impl Scanner {
-    pub fn scan(source: Bytes) -> ParseResult<Vec<Token>> {
+    pub fn scan(source: Bytes) -> Result<Vec<Token>> {
         let mut scanner = Scanner {
             source,
             tokens: Vec::new(),
@@ -36,7 +37,7 @@ impl Scanner {
         Ok(scanner.tokens)
     }
 
-    fn scan_token(&mut self) -> ParseResult<()> {
+    fn scan_token(&mut self) -> Result<()> {
         match self.advance()? {
             b'*' => self.add_token(Token::Star),
             b'"' => self.string()?,
@@ -50,7 +51,7 @@ impl Scanner {
                 } else if c.is_ascii_alphabetic() {
                     self.identifier()?;
                 } else {
-                    return Err(ParseError::Unrecognized(*c));
+                    bail!("Unrecognized token {:?}", *c as char);
                 }
             }
         }
@@ -65,42 +66,36 @@ impl Scanner {
         self.current >= self.source.len()
     }
 
-    fn advance(&mut self) -> ParseResult<&u8> {
+    fn advance(&mut self) -> Result<&u8> {
         self.current += 1;
-        self.source
-            .get(self.current - 1)
-            .ok_or(ParseError::UnexpectedEnd)
+        self.source.get(self.current - 1).ok_or(anyhow!(ERROR_EOF))
     }
 
-    fn peek(&self) -> ParseResult<&u8> {
-        self.source
-            .get(self.current)
-            .ok_or(ParseError::UnexpectedEnd)
+    fn peek(&self) -> Result<&u8> {
+        self.source.get(self.current).ok_or(anyhow!(ERROR_EOF))
     }
 
-    fn peek_next(&self) -> ParseResult<&u8> {
-        self.source
-            .get(self.current + 1)
-            .ok_or(ParseError::UnexpectedEnd)
+    fn peek_next(&self) -> Result<&u8> {
+        self.source.get(self.current + 1).ok_or(anyhow!(ERROR_EOF))
     }
 
-    fn string(&mut self) -> ParseResult<()> {
+    fn string(&mut self) -> Result<()> {
         while self.peek()? != &b'"' {
             self.advance()?;
         }
 
         if self.is_at_end() {
-            return Err(ParseError::UnexpectedEnd);
+            bail!(ERROR_EOF);
         }
 
         self.advance()?;
-        self.add_token(Token::String(
-            String::from_utf8(self.source[self.start + 1..self.current - 1].to_vec()).unwrap(),
-        ));
+        self.add_token(Token::String(String::from_utf8(
+            self.source[self.start + 1..self.current - 1].to_vec(),
+        )?));
         Ok(())
     }
 
-    fn number(&mut self) -> ParseResult<()> {
+    fn number(&mut self) -> Result<()> {
         while !self.is_at_end() && self.peek()?.is_ascii_digit() {
             self.advance()?;
         }
@@ -113,15 +108,12 @@ impl Scanner {
         }
 
         self.add_token(Token::Number(
-            std::str::from_utf8(&self.source[self.start..self.current])
-                .unwrap()
-                .parse()
-                .unwrap(),
+            std::str::from_utf8(&self.source[self.start..self.current])?.parse()?,
         ));
         Ok(())
     }
 
-    fn identifier(&mut self) -> ParseResult<()> {
+    fn identifier(&mut self) -> Result<()> {
         while !self.is_at_end() && self.peek()?.is_ascii_alphabetic() {
             self.advance()?;
         }
@@ -130,9 +122,9 @@ impl Scanner {
         let ty = if let Some(ty) = KEYWORDS.get(text) {
             ty.clone()
         } else {
-            Token::Identifier(
-                String::from_utf8(self.source[self.start..self.current].to_vec()).unwrap(),
-            )
+            Token::Identifier(String::from_utf8(
+                self.source[self.start..self.current].to_vec(),
+            )?)
         };
         self.add_token(ty);
         Ok(())

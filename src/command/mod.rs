@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use bytes::Bytes;
 
 use crate::{
@@ -6,13 +7,8 @@ use crate::{
     parse::{self, Expr, Token},
 };
 
-use self::{
-    error::{CmdError, CmdResult},
-    insert::insert,
-    select::select,
-};
+use self::{insert::insert, select::select};
 
-mod error;
 mod insert;
 mod select;
 
@@ -26,27 +22,27 @@ pub fn run_cmd(db: &Db, stream: Bytes) -> Frame {
     res.unwrap_or_else(|e| Frame::Error(format!("{:?}", e)))
 }
 
-fn on_table<F>(db: &Db, table: Token, f: F) -> CmdResult<Frame>
+fn on_table<F>(db: &Db, table: Token, f: F) -> Result<Frame>
 where
-    F: FnOnce(&Table) -> CmdResult<Frame>,
+    F: FnOnce(&Table) -> Result<Frame>,
 {
     let db = db.lock().unwrap();
-    let table_name = table.ident().ok_or(CmdError::Internal)?;
+    let table_name = table.ident().ok_or(anyhow!("Internal error"))?;
     let table = db
         .get(table_name)
-        .ok_or_else(|| CmdError::TableNotFound(table_name.to_string()))?;
+        .ok_or_else(|| anyhow!("Table \"{}\" not found", table_name))?;
     f(table)
 }
 
-fn on_table_mut<F>(db: &Db, table: Token, f: F) -> CmdResult<Frame>
+fn on_table_mut<F>(db: &Db, table: Token, f: F) -> Result<Frame>
 where
-    F: FnOnce(&mut Table) -> CmdResult<Frame>,
+    F: FnOnce(&mut Table) -> Result<Frame>,
 {
     let mut db = db.lock().unwrap();
-    let table_name = table.ident().ok_or(CmdError::Internal)?;
+    let table_name = table.ident().ok_or(anyhow!("Internal error"))?;
     let table = db
         .get_mut(table_name)
-        .ok_or_else(|| CmdError::TableNotFound(table_name.to_string()))?;
+        .ok_or_else(|| anyhow!("Table \"{}\" not found", table_name))?;
     f(table)
 }
 
@@ -54,6 +50,7 @@ where
 mod tests {
     use std::{
         collections::HashMap,
+        fmt::Debug,
         sync::{Arc, Mutex},
     };
 
@@ -67,23 +64,20 @@ mod tests {
     #[test]
     fn test_select() {
         let db = init_db();
-        assert_eq!(
+        assert_ok(
             select(&db, Key::Glob, Token::Identifier("people".into())),
-            Ok(Frame::Table(vec![
+            Frame::Table(vec![
                 vec!["name".into(), "age".into(), "ID".into()],
                 vec!["Elliot".into(), "16".into(), "0".into()],
-            ]))
+            ]),
         );
-        assert_eq!(
+        assert_ok(
             select(
                 &db,
                 Key::List(vec![Token::Identifier("name".into())]),
-                Token::Identifier("people".into())
+                Token::Identifier("people".into()),
             ),
-            Ok(Frame::Table(vec![
-                vec!["name".into()],
-                vec!["Elliot".into()],
-            ]))
+            Frame::Table(vec![vec!["name".into()], vec!["Elliot".into()]]),
         );
     }
 
@@ -113,14 +107,14 @@ mod tests {
             ]],
         )
         .is_ok());
-        assert_eq!(
+        assert_ok(
             select(&db, Key::Glob, Token::Identifier("people".into())),
-            Ok(Frame::Table(vec![
+            Frame::Table(vec![
                 vec!["name".into(), "age".into(), "ID".into()],
                 vec!["Elliot".into(), "16".into(), "0".into()],
                 vec!["Joe".into(), "60".into(), "1".into()],
                 vec!["Fredward".into(), "999".into(), "2".into()],
-            ]))
+            ]),
         );
     }
 
@@ -134,16 +128,16 @@ mod tests {
             vec![vec![LiteralValue::String("Elliot".into())]],
         )
         .is_ok());
-        assert_eq!(
+        assert_ok(
             select(&db, Key::Glob, Token::Identifier("people".into())),
-            Ok(Frame::Table(vec![
+            Frame::Table(vec![
                 vec!["name".into(), "age".into(), "ID".into()],
                 vec!["Elliot".into(), "16".into(), "0".into()],
                 vec!["Elliot".into(), Bytes::new(), "1".into()],
-            ]))
+            ]),
         );
 
-        assert_eq!(
+        assert_err(
             insert(
                 &db,
                 Token::Identifier("people".into()),
@@ -152,10 +146,10 @@ mod tests {
                     LiteralValue::Number(1.0),
                     LiteralValue::Number(2.0),
                     LiteralValue::Number(3.0),
-                    LiteralValue::Number(4.0)
-                ]]
+                    LiteralValue::Number(4.0),
+                ]],
             ),
-            Err(CmdError::User("too many values supplied".into()))
+            "too many values supplied",
         );
     }
 
@@ -184,20 +178,20 @@ mod tests {
         )
         .is_ok());
 
-        assert_eq!(
+        assert_ok(
             select(
                 &db,
                 Key::List(vec![
                     Token::Identifier("three".into()),
-                    Token::Identifier("inc".into())
+                    Token::Identifier("inc".into()),
                 ]),
-                Token::Identifier("table".into())
+                Token::Identifier("table".into()),
             ),
-            Ok(Frame::Table(vec![
+            Frame::Table(vec![
                 vec!["three".into(), "inc".into()],
                 vec!["3".into(), "11".into()],
                 vec!["not 3".into(), "12".into()],
-            ]))
+            ]),
         );
     }
 
@@ -214,5 +208,21 @@ mod tests {
             ])
             .unwrap();
         Arc::new(Mutex::new(HashMap::from([("people".into(), table)])))
+    }
+
+    fn assert_ok<T: Debug + PartialEq>(res: Result<T>, expected: T) {
+        assert!(res.is_ok());
+        match res {
+            Ok(res) => assert_eq!(res, expected),
+            Err(_) => unreachable!(),
+        }
+    }
+
+    fn assert_err<T>(res: Result<T>, expected: &str) {
+        assert!(res.is_err());
+        match res {
+            Ok(_) => unreachable!(),
+            Err(e) => assert_eq!(e.to_string(), expected),
+        }
     }
 }

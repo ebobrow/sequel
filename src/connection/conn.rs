@@ -1,12 +1,13 @@
 use std::io::{self, Cursor};
 
+use anyhow::{bail, Result};
 use bytes::{Buf, Bytes, BytesMut};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, BufWriter},
     net::TcpStream,
 };
 
-use super::{ConnError, ConnResult, Frame};
+use super::Frame;
 
 pub struct Connection {
     stream: BufWriter<TcpStream>,
@@ -21,7 +22,7 @@ impl Connection {
         }
     }
 
-    pub async fn read_frame(&mut self) -> ConnResult<Option<Frame>> {
+    pub async fn read_frame(&mut self) -> Result<Option<Frame>> {
         loop {
             if let Some(frame) = self.parse_frame()? {
                 return Ok(Some(frame));
@@ -31,15 +32,16 @@ impl Connection {
                 if self.buffer.is_empty() {
                     return Ok(None);
                 } else {
-                    return Err(ConnError::Reset);
+                    bail!("connection reset by peer");
                 }
             }
         }
     }
 
-    fn parse_frame(&mut self) -> ConnResult<Option<Frame>> {
+    fn parse_frame(&mut self) -> Result<Option<Frame>> {
         let mut buf = Cursor::new(&self.buffer[..]);
         match Frame::check(&mut buf) {
+            Ok(None) => Ok(None),
             Ok(_) => {
                 let len = buf.position() as usize;
                 buf.set_position(0);
@@ -47,7 +49,6 @@ impl Connection {
                 self.buffer.advance(len);
                 Ok(Some(frame))
             }
-            Err(ConnError::Incomplete) => Ok(None),
             Err(e) => Err(e),
         }
     }

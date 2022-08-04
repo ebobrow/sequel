@@ -1,9 +1,9 @@
 use std::collections::BTreeSet;
 
+use anyhow::anyhow;
 use bytes::Bytes;
 
 use super::{
-    error::{DbError, DbResult},
     row::{ColumnHeader, Row},
     Column,
 };
@@ -14,15 +14,15 @@ pub struct Table {
 }
 
 impl TryFrom<Vec<ColumnHeader>> for Table {
-    type Error = DbError;
+    type Error = String;
 
-    fn try_from(cols: Vec<ColumnHeader>) -> DbResult<Self> {
+    fn try_from(cols: Vec<ColumnHeader>) -> Result<Self, Self::Error> {
         // Don't allow duplicate column names
         let mut sorted = cols.clone();
         sorted.sort_by_key(|col| col.name().to_string());
         for i in 0..sorted.len() - 1 {
             if sorted[i].name() == sorted[i + 1].name() {
-                return Err(DbError::Creation("Cannot have duplicate columns".into()));
+                return Err("Cannot have duplicate columns".into());
             }
         }
         match cols.iter().filter(|col| col.is_primary()).count() {
@@ -39,10 +39,7 @@ impl TryFrom<Vec<ColumnHeader>> for Table {
                 col_headers: cols,
                 rows: BTreeSet::new(),
             }),
-            n => Err(DbError::Creation(format!(
-                "Expected 1 primary key, found {}",
-                n
-            ))),
+            n => Err(format!("Expected 1 primary key, found {}", n)),
         }
     }
 }
@@ -52,7 +49,7 @@ impl Table {
         &self.rows
     }
 
-    pub fn append(&mut self, cols: Vec<Column>) -> DbResult<()> {
+    pub fn append(&mut self, cols: Vec<Column>) -> anyhow::Result<()> {
         let (primary_col, cols): (Vec<_>, Vec<_>) = cols
             .into_iter()
             .partition(|col| col.name() == self.primary_key().name());
@@ -61,7 +58,9 @@ impl Table {
                 let val = Bytes::from(
                     self.primary_key_mut()
                         .inc()
-                        .ok_or(DbError::Internal)?
+                        .ok_or(anyhow!(
+                            "Must specify primary key if it doesn't have default"
+                        ))?
                         .to_string(),
                 );
                 self.rows

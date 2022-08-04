@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use bytes::Bytes;
 
 use crate::{
@@ -6,12 +7,9 @@ use crate::{
     parse::{Key, Token},
 };
 
-use super::{
-    error::{CmdError, CmdResult},
-    on_table,
-};
+use super::on_table;
 
-pub fn select(db: &Db, key: Key, table: Token) -> CmdResult<Frame> {
+pub fn select(db: &Db, key: Key, table: Token) -> Result<Frame> {
     on_table(db, table, |table| match key {
         Key::Glob => {
             let headers: Vec<_> = table
@@ -35,8 +33,8 @@ pub fn select(db: &Db, key: Key, table: Token) -> CmdResult<Frame> {
         Key::List(cols) => {
             let names = cols
                 .iter()
-                .map(|col| Ok(col.ident().ok_or(CmdError::Internal)?.to_string()))
-                .collect::<CmdResult<Vec<_>>>()?;
+                .map(|col| Ok(col.ident().ok_or(anyhow!("Internal error"))?.to_string()))
+                .collect::<Result<Vec<_>>>()?;
             let mut contents: Vec<Vec<_>> = table
                 .rows()
                 .iter()

@@ -1,34 +1,14 @@
-use std::fmt::Debug;
+use anyhow::{bail, Result};
 
-use super::token::Token;
+use super::Token;
 
-#[derive(PartialEq)]
-pub enum ParseError {
-    Unexpected {
-        // TODO: This requires values for literal types like `Number`
-        expected: Vec<Token>,
-        got: Token,
-    },
-    UnexpectedEnd,
-    Unrecognized(u8),
-    Internal,
-}
+pub const ERROR_EOF: &'static str = "Unexpected end of file";
 
-impl Debug for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Unexpected { expected, got } => {
-                let mut msg = format!("expected one of: {:?}", expected[0]);
-                for ty in &expected[1..] {
-                    msg.push_str(&format!(", {:?}", ty)[..]);
-                }
-                write!(f, "Unexpected token: `{}`; {}", got.ident().unwrap(), msg)
-            }
-            Self::UnexpectedEnd => write!(f, "Unexpected end of file"),
-            Self::Unrecognized(c) => write!(f, "Unrecognized token {:?}", *c as char),
-            Self::Internal => write!(f, "Internal error"),
-        }
+// TODO: This requires values for literal types like `Number`
+pub fn throw_unexpected<T>(got: &Token, expected: Vec<Token>) -> Result<T> {
+    let mut msg = format!("expected one of: {:?}", expected[0]);
+    for ty in &expected[1..] {
+        msg.push_str(&format!(", {:?}", ty)[..]);
     }
+    bail!("Unexpected token: `{:#?}`; {}", got, msg);
 }
-
-pub type ParseResult<T> = Result<T, ParseError>;

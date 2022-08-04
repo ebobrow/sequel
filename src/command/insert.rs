@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 
+use anyhow::{anyhow, Result};
 use bytes::Bytes;
 
 use crate::{
@@ -8,33 +9,22 @@ use crate::{
     parse::{LiteralValue, Token, Tokens},
 };
 
-use super::{
-    error::{CmdError, CmdResult},
-    on_table_mut,
-};
+use super::on_table_mut;
 
-pub fn insert(
-    db: &Db,
-    table: Token,
-    cols: Tokens,
-    rows: Vec<Vec<LiteralValue>>,
-) -> CmdResult<Frame> {
+pub fn insert(db: &Db, table: Token, cols: Tokens, rows: Vec<Vec<LiteralValue>>) -> Result<Frame> {
     on_table_mut(db, table, |table| match cols {
         Tokens::List(specified_cols) => {
             let specified_col_names = specified_cols
                 .iter()
                 .map(|col| col.ident())
                 .collect::<Option<Vec<_>>>()
-                .ok_or(CmdError::Internal)?;
+                .ok_or(anyhow!("Internal error"))?;
             let unknown_cols: Vec<_> = specified_col_names
                 .iter()
                 .filter(|col| !table.visible_keys().any(|header| header.name() == **col))
                 .collect();
             if !unknown_cols.is_empty() {
-                return Err(CmdError::User(format!(
-                    "Unknown columns: {:?}",
-                    unknown_cols,
-                )));
+                return Err(anyhow!("Unknown columns: {:?}", unknown_cols,));
             }
             for values in rows {
                 let mut columns = Vec::new();
@@ -59,7 +49,7 @@ pub fn insert(
                         }
                     }
                     Ordering::Greater => {
-                        return Err(CmdError::User("too many values supplied".into()));
+                        return Err(anyhow!("too many values supplied"));
                     }
                     Ordering::Equal => {}
                 };
@@ -86,7 +76,7 @@ pub fn insert(
                         }
                     }
                     Ordering::Greater => {
-                        return Err(CmdError::User("too many values supplied".into()));
+                        return Err(anyhow!("too many values supplied"));
                     }
                     Ordering::Equal => {}
                 };
@@ -97,12 +87,12 @@ pub fn insert(
     })
 }
 
-fn get_default(header: &mut ColumnHeader) -> CmdResult<Column> {
+fn get_default(header: &mut ColumnHeader) -> Result<Column> {
     let val = match header.default() {
         DefaultOpt::None => Bytes::new(),
         DefaultOpt::Some(val) => val.clone(),
         DefaultOpt::Incrementing(_) => {
-            Bytes::from(header.inc().ok_or(CmdError::Internal)?.to_string())
+            Bytes::from(header.inc().ok_or(anyhow!("Internal error"))?.to_string())
         }
     };
     Ok(Column::new(val, header.name().to_string()))

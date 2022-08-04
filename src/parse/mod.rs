@@ -1,3 +1,4 @@
+use anyhow::Result;
 use bytes::Bytes;
 
 use parser::Parser;
@@ -5,7 +6,6 @@ use scanner::Scanner;
 
 pub use self::{
     ast::{Expr, Key, LiteralValue, Tokens},
-    error::{ParseError, ParseResult},
     token::Token,
 };
 
@@ -15,7 +15,7 @@ mod parser;
 mod scanner;
 mod token;
 
-pub fn parse(stream: Bytes) -> ParseResult<Expr> {
+pub fn parse(stream: Bytes) -> Result<Expr> {
     let tokens = Scanner::scan(stream)?;
     let mut parser = Parser::new(tokens);
     parser.parse()
@@ -23,12 +23,14 @@ pub fn parse(stream: Bytes) -> ParseResult<Expr> {
 
 #[cfg(test)]
 mod tests {
+    use anyhow::Result;
+
     use super::{
         ast::{Expr, Key},
+        error::ERROR_EOF,
         parser::Parser,
         scanner::Scanner,
         token::Token,
-        ParseError,
     };
 
     #[test]
@@ -54,14 +56,8 @@ mod tests {
 
     #[test]
     fn scanner_err() {
-        assert_eq!(
-            Scanner::scan("#".into()),
-            Err(ParseError::Unrecognized(b'#'))
-        );
-        assert_eq!(
-            Scanner::scan("\"unterminated string".into()),
-            Err(ParseError::UnexpectedEnd)
-        );
+        assert_err(Scanner::scan("#".into()), "Unrecognized token '#'");
+        assert_err(Scanner::scan("\"unterminated string".into()), ERROR_EOF);
     }
 
     #[test]
@@ -85,14 +81,11 @@ mod tests {
 
     #[test]
     fn parser_err() {
-        assert_eq!(
+        assert_err(
             Parser::new(vec![Token::From]).parse(),
-            Err(ParseError::Unexpected {
-                expected: vec![Token::Insert, Token::Select],
-                got: Token::From
-            })
+            "Unexpected token: `From`; expected one of: Insert, Select",
         );
-        assert_eq!(
+        assert_err(
             Parser::new(vec![
                 Token::Insert,
                 Token::Into,
@@ -106,10 +99,15 @@ mod tests {
                 Token::RightParen,
             ])
             .parse(),
-            Err(ParseError::Unexpected {
-                expected: vec![Token::Number(0.0), Token::String(String::new())],
-                got: Token::Star
-            })
+            "Unexpected token: `Star`; expected one of: Number(0.0), String(\"\")",
         )
+    }
+
+    fn assert_err<T>(res: Result<T>, expected: &str) {
+        assert!(res.is_err());
+        match res {
+            Ok(_) => unreachable!(),
+            Err(e) => assert_eq!(e.to_string(), expected),
+        }
     }
 }

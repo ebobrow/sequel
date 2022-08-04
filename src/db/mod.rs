@@ -4,12 +4,10 @@ use std::{
 };
 
 pub use self::{
-    error::DbError,
     row::{Column, ColumnHeader, DefaultOpt, Row},
     table::Table,
 };
 
-mod error;
 mod row;
 mod table;
 
