@@ -17,3 +17,4 @@ bytes = "1"
 phf = { version = "0.11", features = ["macros"] }
 futures = "0.3"
 anyhow = "1.0.59"
+rustyline = "10.0.0"
