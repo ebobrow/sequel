@@ -68,15 +68,21 @@ impl Scanner {
 
     fn advance(&mut self) -> Result<&u8> {
         self.current += 1;
-        self.source.get(self.current - 1).ok_or(anyhow!(ERROR_EOF))
+        self.source
+            .get(self.current - 1)
+            .ok_or_else(|| anyhow!(ERROR_EOF))
     }
 
     fn peek(&self) -> Result<&u8> {
-        self.source.get(self.current).ok_or(anyhow!(ERROR_EOF))
+        self.source
+            .get(self.current)
+            .ok_or_else(|| anyhow!(ERROR_EOF))
     }
 
     fn peek_next(&self) -> Result<&u8> {
-        self.source.get(self.current + 1).ok_or(anyhow!(ERROR_EOF))
+        self.source
+            .get(self.current + 1)
+            .ok_or_else(|| anyhow!(ERROR_EOF))
     }
 
     fn string(&mut self) -> Result<()> {

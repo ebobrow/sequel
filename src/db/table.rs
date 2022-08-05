@@ -58,9 +58,9 @@ impl Table {
                 let val = Bytes::from(
                     self.primary_key_mut()
                         .inc()
-                        .ok_or(anyhow!(
-                            "Must specify primary key if it doesn't have default"
-                        ))?
+                        .ok_or_else(|| {
+                            anyhow!("Must specify primary key if it doesn't have default")
+                        })?
                         .to_string(),
                 );
                 self.rows

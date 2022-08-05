@@ -18,7 +18,7 @@ pub fn insert(db: &Db, table: Token, cols: Tokens, rows: Vec<Vec<LiteralValue>>)
                 .iter()
                 .map(|col| col.ident())
                 .collect::<Option<Vec<_>>>()
-                .ok_or(anyhow!("Internal error"))?;
+                .ok_or_else(|| anyhow!("Internal error"))?;
             let unknown_cols: Vec<_> = specified_col_names
                 .iter()
                 .filter(|col| !table.visible_keys().any(|header| header.name() == **col))
@@ -91,9 +91,12 @@ fn get_default(header: &mut ColumnHeader) -> Result<Column> {
     let val = match header.default() {
         DefaultOpt::None => Bytes::new(),
         DefaultOpt::Some(val) => val.clone(),
-        DefaultOpt::Incrementing(_) => {
-            Bytes::from(header.inc().ok_or(anyhow!("Internal error"))?.to_string())
-        }
+        DefaultOpt::Incrementing(_) => Bytes::from(
+            header
+                .inc()
+                .ok_or_else(|| anyhow!("Internal error"))?
+                .to_string(),
+        ),
     };
     Ok(Column::new(val, header.name().to_string()))
 }

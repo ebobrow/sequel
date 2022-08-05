@@ -109,7 +109,7 @@ impl Display for Frame {
 }
 
 fn throw_incomplete<T>(res: Option<T>) -> Result<T> {
-    res.ok_or(anyhow!("stream ended early"))
+    res.ok_or_else(|| anyhow!("stream ended early"))
 }
 
 fn get_u8(src: &mut Cursor<&[u8]>) -> Option<u8> {

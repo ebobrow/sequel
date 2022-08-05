@@ -106,14 +106,18 @@ impl Parser {
     }
 
     fn peek(&self) -> Result<&Token> {
-        self.tokens.get(self.current).ok_or(anyhow!(ERROR_EOF))
+        self.tokens
+            .get(self.current)
+            .ok_or_else(|| anyhow!(ERROR_EOF))
     }
 
     fn previous(&self) -> Result<&Token> {
         if self.current == 0 {
             Err(anyhow!("Internal error"))
         } else {
-            self.tokens.get(self.current - 1).ok_or(anyhow!(ERROR_EOF))
+            self.tokens
+                .get(self.current - 1)
+                .ok_or_else(|| anyhow!(ERROR_EOF))
         }
     }
 

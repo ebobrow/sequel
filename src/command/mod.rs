@@ -27,7 +27,7 @@ where
     F: FnOnce(&Table) -> Result<Frame>,
 {
     let db = db.lock().unwrap();
-    let table_name = table.ident().ok_or(anyhow!("Internal error"))?;
+    let table_name = table.ident().ok_or_else(|| anyhow!("Internal error"))?;
     let table = db
         .get(table_name)
         .ok_or_else(|| anyhow!("Table \"{}\" not found", table_name))?;
@@ -39,7 +39,7 @@ where
     F: FnOnce(&mut Table) -> Result<Frame>,
 {
     let mut db = db.lock().unwrap();
-    let table_name = table.ident().ok_or(anyhow!("Internal error"))?;
+    let table_name = table.ident().ok_or_else(|| anyhow!("Internal error"))?;
     let table = db
         .get_mut(table_name)
         .ok_or_else(|| anyhow!("Table \"{}\" not found", table_name))?;
