@@ -1,10 +1,10 @@
 // TODO: move this to src/server.rs and only export `server::run`
 use std::{
     collections::HashMap,
-    io,
     sync::{Arc, Mutex},
 };
 
+use anyhow::Result;
 use sequel::{
     connection::{Connection, Frame},
     db::{ColumnHeader, Db, DefaultOpt, Table},
@@ -13,7 +13,7 @@ use sequel::{
 use tokio::net::{TcpListener, TcpStream};
 
 #[tokio::main]
-async fn main() -> io::Result<()> {
+async fn main() -> Result<()> {
     let listener = TcpListener::bind("127.0.0.1:3000").await?;
 
     println!("Listening");
@@ -25,8 +25,7 @@ async fn main() -> io::Result<()> {
             ColumnHeader::new("age".into(), DefaultOpt::None),
             ColumnHeader::new("test".into(), DefaultOpt::Incrementing(0)),
             ColumnHeader::new("three".into(), DefaultOpt::Some("3".into())),
-        ])
-        .unwrap(),
+        ])?,
     )])));
 
     loop {

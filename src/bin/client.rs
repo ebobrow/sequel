@@ -1,5 +1,6 @@
-use std::io::{self, Cursor};
+use std::io::Cursor;
 
+use anyhow::Result;
 use futures::{select, FutureExt};
 use rustyline::{Config, EditMode, Editor};
 use sequel::connection::Frame;
@@ -11,8 +12,8 @@ use tokio::{
 
 // TODO: use `Connection`?
 #[tokio::main]
-async fn main() -> io::Result<()> {
-    let mut stream = TcpStream::connect("127.0.0.1:3000").await.unwrap();
+async fn main() -> Result<()> {
+    let mut stream = TcpStream::connect("127.0.0.1:3000").await?;
     let (mut rd, mut wr) = stream.split();
 
     let (tx, mut rx) = watch::channel(String::new());
@@ -44,20 +45,20 @@ async fn main() -> io::Result<()> {
     loop {
         select! {
             n = rd.read(&mut buf).fuse() => {
-                let mut cursor = Cursor::new(&buf[..n.unwrap()]);
+                let mut cursor = Cursor::new(&buf[..n?]);
                 if let Ok(frame) = Frame::parse(&mut cursor) {
                     println!("{}", frame);
                 }
-                tx2.send(true).unwrap();
+                tx2.send(true)?;
             }
             res = rx.changed().fuse() => {
-                tx2.send(false).unwrap();
+                tx2.send(false)?;
                 if res.is_ok() {
                     let line = rx.borrow();
-                    wr.write_u8(b':').await.unwrap();
-                    wr.write_all(line.as_bytes()).await.unwrap();
-                    wr.write_all(b"\r\n").await.unwrap();
-                    wr.flush().await.unwrap();
+                    wr.write_u8(b':').await?;
+                    wr.write_all(line.as_bytes()).await?;
+                    wr.write_all(b"\r\n").await?;
+                    wr.flush().await?;
                 } else {
                     break;
                 }

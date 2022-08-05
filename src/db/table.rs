@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use bytes::Bytes;
 
 use super::{
@@ -14,7 +14,7 @@ pub struct Table {
 }
 
 impl TryFrom<Vec<ColumnHeader>> for Table {
-    type Error = String;
+    type Error = anyhow::Error;
 
     fn try_from(cols: Vec<ColumnHeader>) -> Result<Self, Self::Error> {
         // Don't allow duplicate column names
@@ -22,7 +22,7 @@ impl TryFrom<Vec<ColumnHeader>> for Table {
         sorted.sort_by_key(|col| col.name().to_string());
         for i in 0..sorted.len() - 1 {
             if sorted[i].name() == sorted[i + 1].name() {
-                return Err("Cannot have duplicate columns".into());
+                bail!("Cannot have duplicate columns");
             }
         }
         match cols.iter().filter(|col| col.is_primary()).count() {
@@ -39,7 +39,7 @@ impl TryFrom<Vec<ColumnHeader>> for Table {
                 col_headers: cols,
                 rows: BTreeSet::new(),
             }),
-            n => Err(format!("Expected 1 primary key, found {}", n)),
+            n => bail!("Expected 1 primary key, found {}", n),
         }
     }
 }

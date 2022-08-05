@@ -14,7 +14,7 @@ impl Row {
         }
     }
 
-    pub fn cols(&self, names: &[String]) -> Vec<Bytes> {
+    pub fn cols(&self, names: &[String]) -> Option<Vec<Bytes>> {
         let mut cols = Vec::new();
         let all_col_names = self
             .cols
@@ -22,17 +22,9 @@ impl Row {
             .into_iter()
             .chain([self.primary_key_col.clone()]);
         for name in names {
-            cols.push(
-                all_col_names
-                    .clone()
-                    .find(|col| col.name() == name)
-                    // TODO: error--feels weird having separate db and command errors. consolidate
-                    // or remove both and just use strings?
-                    .unwrap()
-                    .data,
-            );
+            cols.push(all_col_names.clone().find(|col| col.name() == name)?.data);
         }
-        cols
+        Some(cols)
     }
 }
 

@@ -26,7 +26,8 @@ pub fn select(db: &Db, key: Key, table: Token) -> Result<Frame> {
                 .rows()
                 .iter()
                 .map(|row| row.cols(&header_names[..]))
-                .collect();
+                .collect::<Option<Vec<_>>>()
+                .ok_or(anyhow!("Unknown column names"))?;
             contents.insert(0, headers);
             Ok(Frame::Table(contents))
         }
@@ -39,7 +40,8 @@ pub fn select(db: &Db, key: Key, table: Token) -> Result<Frame> {
                 .rows()
                 .iter()
                 .map(|row| row.cols(&names[..]))
-                .collect();
+                .collect::<Option<Vec<_>>>()
+                .ok_or(anyhow!("Unknown column names"))?;
             contents.insert(0, names.into_iter().map(Bytes::from).collect());
             Ok(Frame::Table(contents))
         }
