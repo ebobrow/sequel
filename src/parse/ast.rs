@@ -21,7 +21,6 @@ pub enum LiteralValue {
     Number(f64),
 }
 
-// TODO: do we want this
 impl From<&LiteralValue> for Bytes {
     fn from(val: &LiteralValue) -> Self {
         match val {

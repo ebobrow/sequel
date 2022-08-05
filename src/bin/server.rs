@@ -32,7 +32,6 @@ async fn main() -> Result<()> {
         let (socket, _) = listener.accept().await?;
         let db = db.clone();
 
-        println!("Accepted");
         tokio::spawn(async move {
             process(socket, db).await;
         });
@@ -40,9 +39,11 @@ async fn main() -> Result<()> {
 }
 
 async fn process(socket: TcpStream, db: Db) {
+    println!("Accepted");
     let mut connection = Connection::new(socket);
     while let Some(Frame::Cmd(cmd)) = connection.read_frame().await.unwrap() {
         let response = run_cmd(&db, cmd);
         connection.write_frame(&response).await.unwrap();
     }
+    println!("Client disconnected");
 }

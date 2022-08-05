@@ -101,8 +101,7 @@ impl Display for Frame {
 
                 Ok(())
             }
-            // TODO: make this like red or something
-            Frame::Error(e) => write!(f, "Error: {}", e),
+            Frame::Error(e) => write!(f, "\x1b[31mError: {}\x1b[0m", e),
             Frame::Null => write!(f, "NULL"),
         }
     }

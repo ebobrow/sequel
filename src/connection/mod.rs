@@ -6,8 +6,6 @@ pub use frame::Frame;
 
 #[cfg(test)]
 mod tests {
-    // TODO: test other stuff?
-
     use super::*;
 
     #[test]

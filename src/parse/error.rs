@@ -10,5 +10,5 @@ pub fn throw_unexpected<T>(got: &Token, expected: Vec<Token>) -> Result<T> {
     for ty in &expected[1..] {
         msg.push_str(&format!(", {:?}", ty)[..]);
     }
-    bail!("Unexpected token: `{:#?}`; {}", got, msg);
+    bail!("Unexpected token: `{:?}`; {}", got, msg);
 }

@@ -29,8 +29,11 @@ async fn main() -> Result<()> {
         .unwrap();
 
         loop {
-            let readline = rl.readline("SQL> ").unwrap();
-            tx.send(readline).unwrap();
+            if let Ok(readline) = rl.readline("SQL> ") {
+                tx.send(readline).unwrap();
+            } else {
+                break;
+            }
             loop {
                 rx2.changed().await.unwrap();
                 if *rx2.borrow() {
@@ -52,14 +55,15 @@ async fn main() -> Result<()> {
                 tx2.send(true)?;
             }
             res = rx.changed().fuse() => {
-                tx2.send(false)?;
                 if res.is_ok() {
+                    tx2.send(false)?;
                     let line = rx.borrow();
                     wr.write_u8(b':').await?;
                     wr.write_all(line.as_bytes()).await?;
                     wr.write_all(b"\r\n").await?;
                     wr.flush().await?;
                 } else {
+                    println!("bye");
                     break;
                 }
             }
