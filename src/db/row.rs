@@ -1,5 +1,7 @@
 use bytes::Bytes;
 
+use crate::parse::{LiteralValue, Ty};
+
 #[derive(Eq, Debug)]
 pub struct Row {
     primary_key_col: Column,
@@ -49,7 +51,7 @@ impl Ord for Row {
 #[derive(Clone, PartialEq)]
 pub enum DefaultOpt {
     None,
-    Some(Bytes),
+    Some(LiteralValue),
     Incrementing(u8),
 }
 
@@ -59,25 +61,57 @@ pub struct ColumnHeader {
     is_primary_key: bool,
     is_hidden: bool,
     default: DefaultOpt,
+    ty: Ty,
 }
 
 impl ColumnHeader {
-    pub fn new(name: String, default: DefaultOpt) -> ColumnHeader {
-        ColumnHeader {
-            name,
-            is_primary_key: false,
-            is_hidden: false,
-            default,
-        }
+    pub fn new(name: String, default: DefaultOpt, ty: Ty) -> Result<ColumnHeader, String> {
+        Self::new_with_check(name, default, ty, false)
     }
 
-    pub fn new_prinary(name: String, default: DefaultOpt) -> ColumnHeader {
-        ColumnHeader {
+    pub fn new_prinary(name: String, default: DefaultOpt, ty: Ty) -> Result<ColumnHeader, String> {
+        Self::new_with_check(name, default, ty, true)
+    }
+
+    fn new_with_check(
+        name: String,
+        default: DefaultOpt,
+        ty: Ty,
+        is_primary_key: bool,
+    ) -> Result<ColumnHeader, String> {
+        let print_err = |def_ty| {
+            format!(
+                "Default type doesn't match declared type; expected {}, got {:?}",
+                def_ty, ty
+            )
+        };
+        match &default {
+            DefaultOpt::None => {}
+            DefaultOpt::Some(val) => match val {
+                LiteralValue::String(_) => {
+                    if ty != Ty::String {
+                        return Err(print_err("String"));
+                    }
+                }
+                LiteralValue::Number(_) => {
+                    if ty != Ty::Number {
+                        return Err(print_err("Number"));
+                    }
+                }
+            },
+            DefaultOpt::Incrementing(_) => {
+                if ty != Ty::Number {
+                    return Err(print_err("Number"));
+                }
+            }
+        };
+        Ok(ColumnHeader {
             name,
-            is_primary_key: true,
+            is_primary_key,
             is_hidden: false,
             default,
-        }
+            ty,
+        })
     }
 
     pub fn new_hidden() -> ColumnHeader {
@@ -86,6 +120,7 @@ impl ColumnHeader {
             is_primary_key: true,
             is_hidden: true,
             default: DefaultOpt::Incrementing(0),
+            ty: Ty::Number,
         }
     }
 
@@ -113,10 +148,15 @@ impl ColumnHeader {
     pub fn is_hidden(&self) -> bool {
         self.is_hidden
     }
+
+    pub fn ty(&self) -> &Ty {
+        &self.ty
+    }
 }
 
 #[derive(Eq, Clone, Debug)]
 pub struct Column {
+    // TODO: Should this be `LiteralValue`? (doens't implement `Eq`)
     data: Bytes,
     name: String, // Should correspond with name in `ColumnHeader`
 }

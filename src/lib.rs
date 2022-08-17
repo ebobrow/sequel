@@ -5,3 +5,5 @@ pub mod db;
 mod parse;
 
 pub use command::run_cmd;
+// TODO: also won't have to be public
+pub use parse::{LiteralValue, Ty};

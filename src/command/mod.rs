@@ -56,7 +56,7 @@ mod tests {
 
     use crate::{
         db::{Column, ColumnHeader, DefaultOpt, Table},
-        parse::{Key, LiteralValue, Token, Tokens},
+        parse::{Key, LiteralValue, Token, Tokens, Ty},
     };
 
     use super::*;
@@ -158,8 +158,13 @@ mod tests {
         let db: Db = Arc::new(Mutex::new(HashMap::from([(
             "table".into(),
             Table::try_from(vec![
-                ColumnHeader::new("three".into(), DefaultOpt::Some("3".into())),
-                ColumnHeader::new("inc".into(), DefaultOpt::Incrementing(11)),
+                ColumnHeader::new(
+                    "three".into(),
+                    DefaultOpt::Some(LiteralValue::Number(3.0)),
+                    Ty::Number,
+                )
+                .unwrap(),
+                ColumnHeader::new("inc".into(), DefaultOpt::Incrementing(11), Ty::Number).unwrap(),
             ])
             .unwrap(),
         )])));
@@ -174,7 +179,7 @@ mod tests {
             &db,
             Token::Identifier("table".into()),
             Tokens::List(vec![Token::Identifier("three".into())]),
-            vec![vec![LiteralValue::String("not 3".into())]]
+            vec![vec![LiteralValue::Number(4.0)]]
         )
         .is_ok());
 
@@ -190,15 +195,15 @@ mod tests {
             Frame::Table(vec![
                 vec!["three".into(), "inc".into()],
                 vec!["3".into(), "11".into()],
-                vec!["not 3".into(), "12".into()],
+                vec!["4".into(), "12".into()],
             ]),
         );
     }
 
     fn init_db() -> Db {
         let mut table = Table::try_from(vec![
-            ColumnHeader::new("name".into(), DefaultOpt::None),
-            ColumnHeader::new("age".into(), DefaultOpt::None),
+            ColumnHeader::new("name".into(), DefaultOpt::None, Ty::String).unwrap(),
+            ColumnHeader::new("age".into(), DefaultOpt::None, Ty::Number).unwrap(),
         ])
         .unwrap();
         table

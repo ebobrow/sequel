@@ -15,6 +15,12 @@ pub enum Expr {
     },
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Ty {
+    String,
+    Number,
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum LiteralValue {
     String(String),

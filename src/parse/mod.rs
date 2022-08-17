@@ -5,7 +5,7 @@ use parser::Parser;
 use scanner::Scanner;
 
 pub use self::{
-    ast::{Expr, Key, LiteralValue, Tokens},
+    ast::{Expr, Key, LiteralValue, Tokens, Ty},
     token::Token,
 };
 

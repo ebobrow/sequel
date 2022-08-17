@@ -8,7 +8,7 @@ use anyhow::Result;
 use sequel::{
     connection::{Connection, Frame},
     db::{ColumnHeader, Db, DefaultOpt, Table},
-    run_cmd,
+    run_cmd, LiteralValue, Ty,
 };
 use tokio::net::{TcpListener, TcpStream};
 
@@ -21,10 +21,15 @@ async fn main() -> Result<()> {
     let db = Arc::new(Mutex::new(HashMap::from([(
         "people".into(),
         Table::try_from(vec![
-            ColumnHeader::new("name".into(), DefaultOpt::None),
-            ColumnHeader::new("age".into(), DefaultOpt::None),
-            ColumnHeader::new("test".into(), DefaultOpt::Incrementing(0)),
-            ColumnHeader::new("three".into(), DefaultOpt::Some("3".into())),
+            ColumnHeader::new("name".into(), DefaultOpt::None, Ty::String).unwrap(),
+            ColumnHeader::new("age".into(), DefaultOpt::None, Ty::Number).unwrap(),
+            ColumnHeader::new("test".into(), DefaultOpt::Incrementing(0), Ty::Number).unwrap(),
+            ColumnHeader::new(
+                "three".into(),
+                DefaultOpt::Some(LiteralValue::Number(3.0)),
+                Ty::Number,
+            )
+            .unwrap(),
         ])?,
     )])));
 

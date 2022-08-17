@@ -90,7 +90,7 @@ pub fn insert(db: &Db, table: Token, cols: Tokens, rows: Vec<Vec<LiteralValue>>)
 fn get_default(header: &mut ColumnHeader) -> Result<Column> {
     let val = match header.default() {
         DefaultOpt::None => Bytes::new(),
-        DefaultOpt::Some(val) => val.clone(),
+        DefaultOpt::Some(val) => val.into(),
         DefaultOpt::Incrementing(_) => Bytes::from(
             header
                 .inc()

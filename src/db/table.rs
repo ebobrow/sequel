@@ -3,6 +3,8 @@ use std::collections::BTreeSet;
 use anyhow::{anyhow, bail};
 use bytes::Bytes;
 
+use crate::Ty;
+
 use super::{
     row::{ColumnHeader, Row},
     Column,
@@ -50,6 +52,29 @@ impl Table {
     }
 
     pub fn append(&mut self, cols: Vec<Column>) -> anyhow::Result<()> {
+        for col in &cols {
+            let header = self
+                .col_headers
+                .iter()
+                .find(|header| header.name() == col.name())
+                .ok_or_else(|| anyhow!("Column {} not found", col.name()))?;
+            if col.data().is_empty() {
+                continue;
+            }
+            match header.ty() {
+                Ty::String => match String::from_utf8(col.data().to_vec()) {
+                    Ok(_) => {}
+                    Err(e) => return Err(e.into()),
+                },
+                Ty::Number => match std::str::from_utf8(col.data()) {
+                    Ok(s) => match s.parse::<f64>() {
+                        Ok(_) => {}
+                        Err(e) => return Err(e.into()),
+                    },
+                    Err(e) => return Err(e.into()),
+                },
+            }
+        }
         let (primary_col, cols): (Vec<_>, Vec<_>) = cols
             .into_iter()
             .partition(|col| col.name() == self.primary_key().name());
