@@ -48,6 +48,7 @@ impl TryFrom<Vec<ColumnHeader>> for Table {
 
 impl Table {
     pub fn rows(&self) -> &BTreeSet<Row> {
+        // TODO: don't include hidden?
         &self.rows
     }
 

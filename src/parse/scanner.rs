@@ -10,6 +10,8 @@ static KEYWORDS: phf::Map<&'static [u8], Token> = phf_map! {
     b"FROM" => Token::From,
     b"INTO" => Token::Into,
     b"VALUES" => Token::Values,
+    b"CREATE" => Token::Create,
+    b"TABLE" => Token::Table,
 };
 
 pub struct Scanner {
@@ -128,9 +130,7 @@ impl Scanner {
         let ty = if let Some(ty) = KEYWORDS.get(text) {
             ty.clone()
         } else {
-            Token::Identifier(String::from_utf8(
-                self.source[self.start..self.current].to_vec(),
-            )?)
+            Token::Identifier(String::from_utf8(text.to_vec())?)
         };
         self.add_token(ty);
         Ok(())

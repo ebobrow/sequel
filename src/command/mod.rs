@@ -7,8 +7,9 @@ use crate::{
     parse::{self, Expr, Token},
 };
 
-use self::{insert::insert, select::select};
+use self::{create_table::create_table, insert::insert, select::select};
 
+mod create_table;
 mod insert;
 mod select;
 
@@ -17,6 +18,7 @@ pub fn run_cmd(db: &Db, stream: Bytes) -> Frame {
     let res = match parse::parse(stream) {
         Ok(Expr::Select { key, table }) => select(db, key, table),
         Ok(Expr::Insert { table, cols, rows }) => insert(db, table, cols, rows),
+        Ok(Expr::CreateTable { name, col_decls }) => create_table(db, name, col_decls),
         Err(e) => return Frame::Error(format!("{:?}", e)),
     };
     res.unwrap_or_else(|e| Frame::Error(format!("{:?}", e)))
@@ -198,6 +200,20 @@ mod tests {
                 vec!["4".into(), "12".into()],
             ]),
         );
+    }
+
+    #[test]
+    fn test_create_table() {
+        let db = Db::default();
+        assert!(create_table(
+            &db,
+            Token::Identifier("people".to_string()),
+            vec![
+                (Token::Identifier("name".to_string()), Ty::String),
+                (Token::Identifier("age".to_string()), Ty::Number)
+            ]
+        )
+        .is_ok());
     }
 
     fn init_db() -> Db {

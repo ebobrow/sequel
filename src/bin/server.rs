@@ -1,4 +1,3 @@
-// TODO: move this to src/server.rs and only export `server::run`
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},

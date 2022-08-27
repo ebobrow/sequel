@@ -57,6 +57,7 @@ async fn main() -> Result<()> {
             res = rx.changed().fuse() => {
                 if res.is_ok() {
                     tx2.send(false)?;
+                    // TODO: don't send if incomplete; allow user to write multiline cmds
                     let line = rx.borrow();
                     wr.write_u8(b':').await?;
                     wr.write_all(line.as_bytes()).await?;

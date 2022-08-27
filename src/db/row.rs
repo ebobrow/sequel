@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use bytes::Bytes;
 
 use crate::parse::{LiteralValue, Ty};
@@ -65,11 +66,11 @@ pub struct ColumnHeader {
 }
 
 impl ColumnHeader {
-    pub fn new(name: String, default: DefaultOpt, ty: Ty) -> Result<ColumnHeader, String> {
+    pub fn new(name: String, default: DefaultOpt, ty: Ty) -> Result<ColumnHeader> {
         Self::new_with_check(name, default, ty, false)
     }
 
-    pub fn new_prinary(name: String, default: DefaultOpt, ty: Ty) -> Result<ColumnHeader, String> {
+    pub fn new_prinary(name: String, default: DefaultOpt, ty: Ty) -> Result<ColumnHeader> {
         Self::new_with_check(name, default, ty, true)
     }
 
@@ -78,11 +79,12 @@ impl ColumnHeader {
         default: DefaultOpt,
         ty: Ty,
         is_primary_key: bool,
-    ) -> Result<ColumnHeader, String> {
+    ) -> Result<ColumnHeader> {
         let print_err = |def_ty| {
-            format!(
+            anyhow!(
                 "Default type doesn't match declared type; expected {}, got {:?}",
-                def_ty, ty
+                def_ty,
+                ty
             )
         };
         match &default {

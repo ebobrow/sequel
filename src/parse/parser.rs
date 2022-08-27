@@ -1,6 +1,6 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 
-use crate::parse::error::ERROR_EOF;
+use crate::{parse::error::ERROR_EOF, Ty};
 
 use super::{
     ast::{Expr, Key, LiteralValue, Tokens},
@@ -27,6 +27,7 @@ impl Parser {
         match cur {
             Token::Insert => self.insert(),
             Token::Select => self.select(),
+            Token::Create => self.create_table(),
             _ => throw_unexpected(cur, vec![Token::Insert, Token::Select]),
         }
     }
@@ -45,6 +46,36 @@ impl Parser {
         self.consume(&Token::From)?;
         let table = self.consume_ident()?.clone();
         Ok(Expr::Select { key, table })
+    }
+
+    fn create_table(&mut self) -> Result<Expr> {
+        self.consume(&Token::Table)?;
+        let name = self.consume_ident()?.clone();
+        let col_decls = self.col_decls()?;
+        Ok(Expr::CreateTable { name, col_decls })
+    }
+
+    fn col_decls(&mut self) -> Result<Vec<(Token, Ty)>> {
+        self.consume(&Token::LeftParen)?;
+        let first_ident = self.consume_ident()?.clone();
+        let first_ty = self.ty()?;
+        let mut decls = vec![(first_ident, first_ty)];
+        while self.consume(&Token::Comma).is_ok() {
+            decls.push((self.consume_ident()?.clone(), self.ty()?));
+        }
+        self.consume(&Token::RightParen)?;
+        Ok(decls)
+    }
+
+    fn ty(&mut self) -> Result<Ty> {
+        let name = self.consume_ident()?;
+        Ok(
+            match &name.ident().ok_or_else(|| anyhow!("expected ident"))?[..] {
+                "string" => Ty::String,
+                "number" => Ty::Number,
+                other => bail!("unknown type {}", other),
+            },
+        )
     }
 
     fn key(&mut self) -> Result<Key> {

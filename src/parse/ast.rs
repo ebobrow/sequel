@@ -13,8 +13,13 @@ pub enum Expr {
         cols: Tokens,
         rows: Vec<Vec<LiteralValue>>,
     },
+    CreateTable {
+        name: Token,
+        col_decls: Vec<(Token, Ty)>,
+    },
 }
 
+// TODO: real `Ty`s (varchar, etc.)
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Ty {
     String,

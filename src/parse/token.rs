@@ -10,6 +10,8 @@ pub enum Token {
     From,
     Into,
     Values,
+    Create,
+    Table,
 
     Identifier(String),
     Number(f64),

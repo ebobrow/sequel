@@ -26,7 +26,7 @@ mod tests {
     use anyhow::Result;
 
     use super::{
-        ast::{Expr, Key},
+        ast::{Expr, Key, Ty},
         error::ERROR_EOF,
         parser::Parser,
         scanner::Scanner,
@@ -75,6 +75,34 @@ mod tests {
             Expr::Select {
                 key: Key::Glob,
                 table: Token::Identifier(String::from("people")),
+            }
+        );
+
+        let tokens = vec![
+            Token::Create,
+            Token::Table,
+            Token::Identifier(String::from("people")),
+            Token::LeftParen,
+            Token::Identifier(String::from("FirstName")),
+            Token::Identifier(String::from("string")),
+            Token::Comma,
+            Token::Identifier(String::from("LastName")),
+            Token::Identifier(String::from("string")),
+            Token::Comma,
+            Token::Identifier(String::from("Age")),
+            Token::Identifier(String::from("number")),
+            Token::RightParen,
+        ];
+        let expr = Parser::new(tokens).parse().unwrap();
+        assert_eq!(
+            expr,
+            Expr::CreateTable {
+                name: Token::Identifier(String::from("people")),
+                col_decls: vec![
+                    (Token::Identifier(String::from("FirstName")), Ty::String),
+                    (Token::Identifier(String::from("LastName")), Ty::String),
+                    (Token::Identifier(String::from("Age")), Ty::Number),
+                ]
             }
         );
     }
