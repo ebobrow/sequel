@@ -3,7 +3,7 @@ use anyhow::{anyhow, bail, Result};
 use crate::{parse::error::ERROR_EOF, Ty};
 
 use super::{
-    ast::{Expr, Key, LiteralValue, Tokens},
+    ast::{ColDecls, Expr, Key, LiteralValue, Tokens},
     error::throw_unexpected,
     token::Token,
 };
@@ -55,7 +55,7 @@ impl Parser {
         Ok(Expr::CreateTable { name, col_decls })
     }
 
-    fn col_decls(&mut self) -> Result<Vec<(Token, Ty)>> {
+    fn col_decls(&mut self) -> Result<ColDecls> {
         self.consume(&Token::LeftParen)?;
         let first_ident = self.consume_ident()?.clone();
         let first_ty = self.ty()?;

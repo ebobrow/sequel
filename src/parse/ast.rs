@@ -15,7 +15,7 @@ pub enum Expr {
     },
     CreateTable {
         name: Token,
-        col_decls: Vec<(Token, Ty)>,
+        col_decls: ColDecls,
     },
 }
 
@@ -52,3 +52,5 @@ pub enum Tokens {
     Omitted,
     List(Vec<Token>),
 }
+
+pub type ColDecls = Vec<(Token, Ty)>;
