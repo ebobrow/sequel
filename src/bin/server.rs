@@ -1,13 +1,7 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
-
 use anyhow::Result;
 use sequel::{
     connection::{Connection, Frame},
-    db::{ColumnHeader, Db, DefaultOpt, Table},
-    run_cmd, LiteralValue, Ty,
+    run_cmd, Db,
 };
 use tokio::net::{TcpListener, TcpStream};
 
@@ -17,20 +11,7 @@ async fn main() -> Result<()> {
 
     println!("Listening");
 
-    let db = Arc::new(Mutex::new(HashMap::from([(
-        "people".into(),
-        Table::try_from(vec![
-            ColumnHeader::new("name".into(), DefaultOpt::None, Ty::String).unwrap(),
-            ColumnHeader::new("age".into(), DefaultOpt::None, Ty::Number).unwrap(),
-            ColumnHeader::new("test".into(), DefaultOpt::Incrementing(0), Ty::Number).unwrap(),
-            ColumnHeader::new(
-                "three".into(),
-                DefaultOpt::Some(LiteralValue::Number(3.0)),
-                Ty::Number,
-            )
-            .unwrap(),
-        ])?,
-    )])));
+    let db = Db::default();
 
     loop {
         let (socket, _) = listener.accept().await?;
