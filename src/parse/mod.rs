@@ -5,7 +5,7 @@ use parser::Parser;
 use scanner::Scanner;
 
 pub use self::{
-    ast::{ColDecls, Expr, Key, LiteralValue, Tokens, Ty},
+    ast::{ColDecl, Constraint, Expr, Key, LiteralValue, Tokens, Ty},
     token::Token,
 };
 
@@ -24,6 +24,8 @@ pub fn parse(stream: Bytes) -> Result<Expr> {
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
+
+    use crate::parse::{ast::Constraint, ColDecl};
 
     use super::{
         ast::{Expr, Key, Ty},
@@ -49,6 +51,33 @@ mod tests {
                 Token::String("two".to_string()),
                 Token::RightParen,
                 Token::Identifier(String::from("table")),
+                Token::EOF,
+            ]
+        );
+
+        let stream = "CREATE TABLE people (ID number PRIMARY KEY, FirstName string, Age number NOT NULL UNIQUE)".into();
+        let tokens = Scanner::scan(stream).unwrap();
+        assert_eq!(
+            tokens,
+            vec![
+                Token::Create,
+                Token::Table,
+                Token::Identifier("people".into()),
+                Token::LeftParen,
+                Token::Identifier("ID".into()),
+                Token::Identifier("number".into()),
+                Token::Primary,
+                Token::Key,
+                Token::Comma,
+                Token::Identifier("FirstName".into()),
+                Token::Identifier("string".into()),
+                Token::Comma,
+                Token::Identifier("Age".into()),
+                Token::Identifier("number".into()),
+                Token::Not,
+                Token::Null,
+                Token::Unique,
+                Token::RightParen,
                 Token::EOF,
             ]
         );
@@ -83,6 +112,11 @@ mod tests {
             Token::Table,
             Token::Identifier(String::from("people")),
             Token::LeftParen,
+            Token::Identifier(String::from("ID")),
+            Token::Identifier(String::from("number")),
+            Token::Primary,
+            Token::Key,
+            Token::Comma,
             Token::Identifier(String::from("FirstName")),
             Token::Identifier(String::from("string")),
             Token::Comma,
@@ -91,6 +125,8 @@ mod tests {
             Token::Comma,
             Token::Identifier(String::from("Age")),
             Token::Identifier(String::from("number")),
+            Token::Not,
+            Token::Null,
             Token::RightParen,
         ];
         let expr = Parser::new(tokens).parse().unwrap();
@@ -99,9 +135,26 @@ mod tests {
             Expr::CreateTable {
                 name: Token::Identifier(String::from("people")),
                 col_decls: vec![
-                    (Token::Identifier(String::from("FirstName")), Ty::String),
-                    (Token::Identifier(String::from("LastName")), Ty::String),
-                    (Token::Identifier(String::from("Age")), Ty::Number),
+                    ColDecl::new(
+                        Token::Identifier(String::from("ID")),
+                        Ty::Number,
+                        vec![Constraint::PrimaryKey]
+                    ),
+                    ColDecl::new(
+                        Token::Identifier(String::from("FirstName")),
+                        Ty::String,
+                        Vec::new()
+                    ),
+                    ColDecl::new(
+                        Token::Identifier(String::from("LastName")),
+                        Ty::String,
+                        Vec::new()
+                    ),
+                    ColDecl::new(
+                        Token::Identifier(String::from("Age")),
+                        Ty::Number,
+                        vec![Constraint::NotNull]
+                    ),
                 ]
             }
         );

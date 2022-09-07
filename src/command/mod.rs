@@ -58,7 +58,7 @@ mod tests {
 
     use crate::{
         db::{Column, ColumnHeader, DefaultOpt, Table},
-        parse::{Key, LiteralValue, Token, Tokens, Ty},
+        parse::{ColDecl, Key, LiteralValue, Token, Tokens, Ty},
     };
 
     use super::*;
@@ -164,9 +164,16 @@ mod tests {
                     "three".into(),
                     DefaultOpt::Some(LiteralValue::Number(3.0)),
                     Ty::Number,
+                    false,
                 )
                 .unwrap(),
-                ColumnHeader::new("inc".into(), DefaultOpt::Incrementing(11), Ty::Number).unwrap(),
+                ColumnHeader::new(
+                    "inc".into(),
+                    DefaultOpt::Incrementing(11),
+                    Ty::Number,
+                    false,
+                )
+                .unwrap(),
             ])
             .unwrap(),
         )])));
@@ -209,8 +216,12 @@ mod tests {
             &db,
             Token::Identifier("people".to_string()),
             vec![
-                (Token::Identifier("name".to_string()), Ty::String),
-                (Token::Identifier("age".to_string()), Ty::Number)
+                ColDecl::new(
+                    Token::Identifier("name".to_string()),
+                    Ty::String,
+                    Vec::new()
+                ),
+                ColDecl::new(Token::Identifier("age".to_string()), Ty::Number, Vec::new())
             ]
         )
         .is_ok());
@@ -218,8 +229,8 @@ mod tests {
 
     fn init_db() -> Db {
         let mut table = Table::try_from(vec![
-            ColumnHeader::new("name".into(), DefaultOpt::None, Ty::String).unwrap(),
-            ColumnHeader::new("age".into(), DefaultOpt::None, Ty::Number).unwrap(),
+            ColumnHeader::new("name".into(), DefaultOpt::None, Ty::String, false).unwrap(),
+            ColumnHeader::new("age".into(), DefaultOpt::None, Ty::Number, false).unwrap(),
         ])
         .unwrap();
         table

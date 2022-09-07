@@ -3,7 +3,7 @@ use std::{fmt::Display, io::Cursor};
 use anyhow::{anyhow, bail, Context, Result};
 use bytes::{Buf, Bytes};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Frame {
     // Starts with `:`
     Cmd(Bytes),

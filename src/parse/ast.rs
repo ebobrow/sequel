@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use bytes::Bytes;
 
 use super::token::Token;
@@ -15,7 +16,7 @@ pub enum Expr {
     },
     CreateTable {
         name: Token,
-        col_decls: ColDecls,
+        col_decls: Vec<ColDecl>,
     },
 }
 
@@ -53,4 +54,43 @@ pub enum Tokens {
     List(Vec<Token>),
 }
 
-pub type ColDecls = Vec<(Token, Ty)>;
+#[derive(Debug, PartialEq)]
+pub struct ColDecl {
+    ident: Token,
+    ty: Ty,
+    constraints: Vec<Constraint>,
+}
+
+impl ColDecl {
+    pub fn new(ident: Token, ty: Ty, constraints: Vec<Constraint>) -> Self {
+        ColDecl {
+            ident,
+            ty,
+            constraints,
+        }
+    }
+
+    pub fn ident(&self) -> Result<&String> {
+        self.ident.ident().ok_or_else(|| anyhow!("Internal error"))
+    }
+
+    pub fn ty(&self) -> &Ty {
+        &self.ty
+    }
+
+    pub fn constraints(&self) -> &[Constraint] {
+        self.constraints.as_ref()
+    }
+}
+
+// TODO: weird redundancy here with `Token`s?
+#[derive(Debug, PartialEq, Eq)]
+pub enum Constraint {
+    NotNull,
+    Unique,
+    PrimaryKey,
+    ForeignKey,
+    Check,
+    Default,
+    CreateIndex,
+}

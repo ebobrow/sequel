@@ -66,12 +66,13 @@ pub struct ColumnHeader {
 }
 
 impl ColumnHeader {
-    pub fn new(name: String, default: DefaultOpt, ty: Ty) -> Result<ColumnHeader> {
-        Self::new_with_check(name, default, ty, false)
-    }
-
-    pub fn new_prinary(name: String, default: DefaultOpt, ty: Ty) -> Result<ColumnHeader> {
-        Self::new_with_check(name, default, ty, true)
+    pub fn new(
+        name: String,
+        default: DefaultOpt,
+        ty: Ty,
+        is_primary_key: bool,
+    ) -> Result<ColumnHeader> {
+        Self::new_with_check(name, default, ty, is_primary_key)
     }
 
     fn new_with_check(

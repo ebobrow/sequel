@@ -4,6 +4,7 @@ use phf::phf_map;
 
 use super::{error::ERROR_EOF, token::Token};
 
+// TODO: automate with macro or some such
 static KEYWORDS: phf::Map<&'static [u8], Token> = phf_map! {
     b"INSERT" => Token::Insert,
     b"SELECT" => Token::Select,
@@ -12,6 +13,15 @@ static KEYWORDS: phf::Map<&'static [u8], Token> = phf_map! {
     b"VALUES" => Token::Values,
     b"CREATE" => Token::Create,
     b"TABLE" => Token::Table,
+    b"NOT" => Token::Not,
+    b"NULL" => Token::Null,
+    b"UNIQUE" => Token::Unique,
+    b"PRIMARY" => Token::Primary,
+    b"FOREIGN" => Token::Foreign,
+    b"KEY" => Token::Key,
+    b"CHECK" => Token::Check,
+    b"DEFAULT" => Token::Default,
+    b"INDEX" => Token::Index,
 };
 
 pub struct Scanner {

@@ -13,6 +13,16 @@ pub enum Token {
     Create,
     Table,
 
+    Not,
+    Null,
+    Unique,
+    Primary,
+    Foreign,
+    Key,
+    Check,
+    Default,
+    Index,
+
     Identifier(String),
     Number(f64),
     String(String),

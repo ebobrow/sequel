@@ -3,7 +3,7 @@ use anyhow::{anyhow, bail, Result};
 use crate::{parse::error::ERROR_EOF, Ty};
 
 use super::{
-    ast::{ColDecls, Expr, Key, LiteralValue, Tokens},
+    ast::{ColDecl, Constraint, Expr, Key, LiteralValue, Tokens},
     error::throw_unexpected,
     token::Token,
 };
@@ -55,16 +55,61 @@ impl Parser {
         Ok(Expr::CreateTable { name, col_decls })
     }
 
-    fn col_decls(&mut self) -> Result<ColDecls> {
+    fn col_decls(&mut self) -> Result<Vec<ColDecl>> {
         self.consume(&Token::LeftParen)?;
         let first_ident = self.consume_ident()?.clone();
         let first_ty = self.ty()?;
-        let mut decls = vec![(first_ident, first_ty)];
+        let mut decls = vec![ColDecl::new(first_ident, first_ty, self.constraints()?)];
         while self.consume(&Token::Comma).is_ok() {
-            decls.push((self.consume_ident()?.clone(), self.ty()?));
+            decls.push(ColDecl::new(
+                self.consume_ident()?.clone(),
+                self.ty()?,
+                self.constraints()?,
+            ));
         }
         self.consume(&Token::RightParen)?;
         Ok(decls)
+    }
+
+    fn constraints(&mut self) -> Result<Vec<Constraint>> {
+        let mut constraints = Vec::new();
+        loop {
+            match self.peek()? {
+                Token::Not => {
+                    self.advance()?;
+                    self.consume(&Token::Null)?;
+                    constraints.push(Constraint::NotNull);
+                }
+                Token::Unique => {
+                    self.advance()?;
+                    constraints.push(Constraint::Unique);
+                }
+                Token::Primary => {
+                    self.advance()?;
+                    self.consume(&Token::Key)?;
+                    constraints.push(Constraint::PrimaryKey);
+                }
+                Token::Foreign => {
+                    self.advance()?;
+                    self.consume(&Token::Key)?;
+                    constraints.push(Constraint::ForeignKey);
+                }
+                Token::Check => {
+                    self.advance()?;
+                    constraints.push(Constraint::Check);
+                }
+                Token::Default => {
+                    self.advance()?;
+                    constraints.push(Constraint::Default);
+                }
+                Token::Create => {
+                    self.advance()?;
+                    self.consume(&Token::Index)?;
+                    constraints.push(Constraint::CreateIndex);
+                }
+                _ => return Ok(constraints),
+            };
+        }
     }
 
     fn ty(&mut self) -> Result<Ty> {
