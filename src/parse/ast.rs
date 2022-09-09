@@ -83,7 +83,7 @@ impl ColDecl {
     }
 }
 
-// TODO: weird redundancy here with `Token`s?
+// TODO: default and check need params (parse accordingly)
 #[derive(Debug, PartialEq, Eq)]
 pub enum Constraint {
     NotNull,

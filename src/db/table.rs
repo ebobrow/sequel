@@ -5,10 +5,7 @@ use bytes::Bytes;
 
 use crate::Ty;
 
-use super::{
-    row::{ColumnHeader, Row},
-    Column,
-};
+use super::{row::Row, Column, ColumnHeader};
 
 pub struct Table {
     col_headers: Vec<ColumnHeader>,
@@ -59,9 +56,27 @@ impl Table {
                 .iter()
                 .find(|header| header.name() == col.name())
                 .ok_or_else(|| anyhow!("Column {} not found", col.name()))?;
+
+            // Check null
             if col.data().is_empty() {
+                if header.not_null() {
+                    bail!("Column {} non-nullable", header.name());
+                }
                 continue;
             }
+
+            // Check unique
+            if header.unique() {
+                if self
+                    .rows()
+                    .iter()
+                    .any(|row| row.cols(&[header.name().to_string()]).unwrap()[0] == col.data())
+                {
+                    bail!("Col {} must be unique", header.name());
+                }
+            }
+
+            // Check type
             match header.ty() {
                 Ty::String => match String::from_utf8(col.data().to_vec()) {
                     Ok(_) => {}

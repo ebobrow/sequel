@@ -4,10 +4,12 @@ use std::{
 };
 
 pub use self::{
-    row::{Column, ColumnHeader, DefaultOpt, Row},
+    column_header::{ColumnHeader, DefaultOpt},
+    row::{Column, Row},
     table::Table,
 };
 
+mod column_header;
 mod row;
 mod table;
 

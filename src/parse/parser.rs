@@ -96,10 +96,12 @@ impl Parser {
                 }
                 Token::Check => {
                     self.advance()?;
+                    todo!();
                     constraints.push(Constraint::Check);
                 }
                 Token::Default => {
                     self.advance()?;
+                    todo!();
                     constraints.push(Constraint::Default);
                 }
                 Token::Create => {

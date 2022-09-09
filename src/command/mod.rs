@@ -160,20 +160,16 @@ mod tests {
         let db: Db = Arc::new(Mutex::new(HashMap::from([(
             "table".into(),
             Table::try_from(vec![
-                ColumnHeader::new(
-                    "three".into(),
-                    DefaultOpt::Some(LiteralValue::Number(3.0)),
-                    Ty::Number,
-                    false,
-                )
-                .unwrap(),
-                ColumnHeader::new(
-                    "inc".into(),
-                    DefaultOpt::Incrementing(11),
-                    Ty::Number,
-                    false,
-                )
-                .unwrap(),
+                ColumnHeader::new("three".into())
+                    .def(DefaultOpt::Some(LiteralValue::Number(3.0)))
+                    .ty(Ty::Number)
+                    .build()
+                    .unwrap(),
+                ColumnHeader::new("inc".into())
+                    .def(DefaultOpt::Incrementing(11))
+                    .ty(Ty::Number)
+                    .build()
+                    .unwrap(),
             ])
             .unwrap(),
         )])));
@@ -229,8 +225,14 @@ mod tests {
 
     fn init_db() -> Db {
         let mut table = Table::try_from(vec![
-            ColumnHeader::new("name".into(), DefaultOpt::None, Ty::String, false).unwrap(),
-            ColumnHeader::new("age".into(), DefaultOpt::None, Ty::Number, false).unwrap(),
+            ColumnHeader::new("name".into())
+                .ty(Ty::String)
+                .build()
+                .unwrap(),
+            ColumnHeader::new("age".into())
+                .ty(Ty::Number)
+                .build()
+                .unwrap(),
         ])
         .unwrap();
         table
