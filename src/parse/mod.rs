@@ -5,7 +5,7 @@ use parser::Parser;
 use scanner::Scanner;
 
 pub use self::{
-    ast::{ColDecl, Constraint, Expr, Key, LiteralValue, Tokens, Ty},
+    ast::{ColDecl, Command, Constraint, Key, LiteralValue, Tokens, Ty},
     token::Token,
 };
 
@@ -15,7 +15,7 @@ mod parser;
 mod scanner;
 mod token;
 
-pub fn parse(stream: Bytes) -> Result<Expr> {
+pub fn parse(stream: Bytes) -> Result<Command> {
     let tokens = Scanner::scan(stream)?;
     let mut parser = Parser::new(tokens);
     parser.parse()
@@ -25,10 +25,13 @@ pub fn parse(stream: Bytes) -> Result<Expr> {
 mod tests {
     use anyhow::Result;
 
-    use crate::parse::{ast::Constraint, ColDecl};
+    use crate::parse::{
+        ast::{Constraint, Expr},
+        ColDecl,
+    };
 
     use super::{
-        ast::{Expr, Key, Ty},
+        ast::{Command, Key, Ty},
         error::ERROR_EOF,
         parser::Parser,
         scanner::Scanner,
@@ -55,7 +58,7 @@ mod tests {
             ]
         );
 
-        let stream = "CREATE TABLE people (ID number PRIMARY KEY, FirstName string, Age number NOT NULL UNIQUE)".into();
+        let stream = "CREATE TABLE people (ID number PRIMARY KEY, FirstName string CHECK (FirstName >= \"Brian\"), Age number NOT NULL UNIQUE)".into();
         let tokens = Scanner::scan(stream).unwrap();
         assert_eq!(
             tokens,
@@ -71,6 +74,12 @@ mod tests {
                 Token::Comma,
                 Token::Identifier("FirstName".into()),
                 Token::Identifier("string".into()),
+                Token::Check,
+                Token::LeftParen,
+                Token::Identifier("FirstName".into()),
+                Token::GreaterEqual,
+                Token::String("Brian".into()),
+                Token::RightParen,
                 Token::Comma,
                 Token::Identifier("Age".into()),
                 Token::Identifier("number".into()),
@@ -101,7 +110,7 @@ mod tests {
         let expr = Parser::new(tokens).parse().unwrap();
         assert_eq!(
             expr,
-            Expr::Select {
+            Command::Select {
                 key: Key::Glob,
                 table: Token::Identifier(String::from("people")),
             }
@@ -127,12 +136,18 @@ mod tests {
             Token::Identifier(String::from("number")),
             Token::Not,
             Token::Null,
+            Token::Check,
+            Token::LeftParen,
+            Token::Identifier("Age".into()),
+            Token::GreaterEqual,
+            Token::Number(18.0),
+            Token::RightParen,
             Token::RightParen,
         ];
         let expr = Parser::new(tokens).parse().unwrap();
         assert_eq!(
             expr,
-            Expr::CreateTable {
+            Command::CreateTable {
                 name: Token::Identifier(String::from("people")),
                 col_decls: vec![
                     ColDecl::new(
@@ -153,7 +168,14 @@ mod tests {
                     ColDecl::new(
                         Token::Identifier(String::from("Age")),
                         Ty::Number,
-                        vec![Constraint::NotNull]
+                        vec![
+                            Constraint::NotNull,
+                            Constraint::Check(Expr::Binary {
+                                left: Token::Identifier("Age".into()),
+                                op: Token::GreaterEqual,
+                                right: Token::Number(18.0)
+                            })
+                        ]
                     ),
                 ]
             }

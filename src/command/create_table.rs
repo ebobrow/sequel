@@ -15,8 +15,8 @@ pub fn create_table(db: &Db, name: Token, col_decls: Vec<ColDecl>) -> Result<Fra
                 Constraint::Unique => {}
                 Constraint::PrimaryKey => {}
                 Constraint::ForeignKey => unimplemented!(),
-                Constraint::Check => unimplemented!(),
-                Constraint::Default => unimplemented!(),
+                Constraint::Check(_) => unimplemented!(),
+                Constraint::Default(_) => unimplemented!(),
                 Constraint::CreateIndex => unimplemented!(),
             }
         }

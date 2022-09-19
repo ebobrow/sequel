@@ -4,7 +4,7 @@ use bytes::Bytes;
 use super::token::Token;
 
 #[derive(Debug, PartialEq)]
-pub enum Expr {
+pub enum Command {
     Select {
         key: Key,
         table: Token,
@@ -17,6 +17,15 @@ pub enum Expr {
     CreateTable {
         name: Token,
         col_decls: Vec<ColDecl>,
+    },
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Expr {
+    Binary {
+        left: Token,
+        op: Token,
+        right: Token,
     },
 }
 
@@ -84,13 +93,13 @@ impl ColDecl {
 }
 
 // TODO: default and check need params (parse accordingly)
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub enum Constraint {
     NotNull,
     Unique,
     PrimaryKey,
     ForeignKey,
-    Check,
-    Default,
+    Check(Expr),
+    Default(LiteralValue),
     CreateIndex,
 }

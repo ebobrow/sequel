@@ -22,6 +22,8 @@ static KEYWORDS: phf::Map<&'static [u8], Token> = phf_map! {
     b"CHECK" => Token::Check,
     b"DEFAULT" => Token::Default,
     b"INDEX" => Token::Index,
+    b"AND" => Token::And,
+    b"OR" => Token::Or,
 };
 
 pub struct Scanner {
@@ -56,6 +58,23 @@ impl Scanner {
             b'(' => self.add_token(Token::LeftParen),
             b')' => self.add_token(Token::RightParen),
             b',' => self.add_token(Token::Comma),
+            b'>' => {
+                if let Ok(b'=') = self.peek() {
+                    self.advance()?;
+                    self.add_token(Token::GreaterEqual);
+                } else {
+                    self.add_token(Token::GreaterThan);
+                }
+            }
+            b'<' => {
+                if let Ok(b'=') = self.peek() {
+                    self.advance()?;
+                    self.add_token(Token::LessEqual);
+                } else {
+                    self.add_token(Token::LessThan);
+                }
+            }
+            b'=' => self.add_token(Token::Equal),
             b' ' => {}
             c => {
                 if c.is_ascii_digit() {

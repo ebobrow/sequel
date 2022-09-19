@@ -4,6 +4,14 @@ pub enum Token {
     LeftParen,
     RightParen,
     Comma,
+    GreaterThan,
+    LessThan,
+    Equal,
+    GreaterEqual,
+    LessEqual,
+
+    And,
+    Or,
 
     Insert,
     Select,

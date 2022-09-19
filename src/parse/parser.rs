@@ -3,7 +3,7 @@ use anyhow::{anyhow, bail, Result};
 use crate::{parse::error::ERROR_EOF, Ty};
 
 use super::{
-    ast::{ColDecl, Constraint, Expr, Key, LiteralValue, Tokens},
+    ast::{ColDecl, Command, Constraint, Expr, Key, LiteralValue, Tokens},
     error::throw_unexpected,
     token::Token,
 };
@@ -18,11 +18,11 @@ impl Parser {
         Parser { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Result<Expr> {
+    pub fn parse(&mut self) -> Result<Command> {
         self.command()
     }
 
-    fn command(&mut self) -> Result<Expr> {
+    fn command(&mut self) -> Result<Command> {
         let cur = self.advance()?;
         match cur {
             Token::Insert => self.insert(),
@@ -32,27 +32,27 @@ impl Parser {
         }
     }
 
-    fn insert(&mut self) -> Result<Expr> {
+    fn insert(&mut self) -> Result<Command> {
         self.consume(&Token::Into)?;
         let table = self.consume_ident()?.clone();
         let cols = self.tokens()?;
         self.consume(&Token::Values)?;
         let rows = self.rows()?;
-        Ok(Expr::Insert { table, cols, rows })
+        Ok(Command::Insert { table, cols, rows })
     }
 
-    fn select(&mut self) -> Result<Expr> {
+    fn select(&mut self) -> Result<Command> {
         let key = self.key()?;
         self.consume(&Token::From)?;
         let table = self.consume_ident()?.clone();
-        Ok(Expr::Select { key, table })
+        Ok(Command::Select { key, table })
     }
 
-    fn create_table(&mut self) -> Result<Expr> {
+    fn create_table(&mut self) -> Result<Command> {
         self.consume(&Token::Table)?;
         let name = self.consume_ident()?.clone();
         let col_decls = self.col_decls()?;
-        Ok(Expr::CreateTable { name, col_decls })
+        Ok(Command::CreateTable { name, col_decls })
     }
 
     fn col_decls(&mut self) -> Result<Vec<ColDecl>> {
@@ -96,13 +96,15 @@ impl Parser {
                 }
                 Token::Check => {
                     self.advance()?;
-                    todo!();
-                    constraints.push(Constraint::Check);
+                    self.consume(&Token::LeftParen)?;
+                    let expr = self.expr()?;
+                    self.consume(&Token::RightParen)?;
+                    constraints.push(Constraint::Check(expr));
                 }
                 Token::Default => {
                     self.advance()?;
-                    todo!();
-                    constraints.push(Constraint::Default);
+                    let lit = self.literal()?;
+                    constraints.push(Constraint::Default(lit));
                 }
                 Token::Create => {
                     self.advance()?;
@@ -111,6 +113,45 @@ impl Parser {
                 }
                 _ => return Ok(constraints),
             };
+        }
+    }
+
+    fn expr(&mut self) -> Result<Expr> {
+        let left = self.bin_side()?;
+        let next = self.advance()?;
+        let op = match next {
+            Token::LessThan
+            | Token::LessEqual
+            | Token::GreaterThan
+            | Token::GreaterEqual
+            | Token::Equal => Ok(next.clone()),
+            _ => throw_unexpected(
+                next,
+                vec![
+                    Token::LessThan,
+                    Token::LessEqual,
+                    Token::GreaterThan,
+                    Token::GreaterEqual,
+                    Token::Equal,
+                ],
+            ),
+        }?;
+        let right = self.bin_side()?;
+        Ok(Expr::Binary { left, op, right })
+    }
+
+    fn bin_side(&mut self) -> Result<Token> {
+        let next = self.advance()?;
+        match next {
+            Token::String(_) | Token::Number(_) | Token::Identifier(_) => Ok(next.clone()),
+            _ => throw_unexpected(
+                next,
+                vec![
+                    Token::String(String::new()),
+                    Token::Number(0.0),
+                    Token::Identifier(String::new()),
+                ],
+            ),
         }
     }
 

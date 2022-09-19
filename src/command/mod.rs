@@ -4,7 +4,7 @@ use bytes::Bytes;
 use crate::{
     connection::Frame,
     db::{Db, Table},
-    parse::{self, Expr, Token},
+    parse::{self, Command, Token},
 };
 
 use self::{create_table::create_table, insert::insert, select::select};
@@ -16,9 +16,9 @@ mod select;
 // Basicaly visitor pattern--rename?
 pub fn run_cmd(db: &Db, stream: Bytes) -> Frame {
     let res = match parse::parse(stream) {
-        Ok(Expr::Select { key, table }) => select(db, key, table),
-        Ok(Expr::Insert { table, cols, rows }) => insert(db, table, cols, rows),
-        Ok(Expr::CreateTable { name, col_decls }) => create_table(db, name, col_decls),
+        Ok(Command::Select { key, table }) => select(db, key, table),
+        Ok(Command::Insert { table, cols, rows }) => insert(db, table, cols, rows),
+        Ok(Command::CreateTable { name, col_decls }) => create_table(db, name, col_decls),
         Err(e) => return Frame::Error(format!("{:?}", e)),
     };
     res.unwrap_or_else(|e| Frame::Error(format!("{:?}", e)))
