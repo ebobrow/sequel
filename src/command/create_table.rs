@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 
 use crate::{
     connection::Frame,
-    db::{ColumnHeader, Db, Table},
+    db::{ColumnHeader, Db, DefaultOpt, Table},
     parse::{ColDecl, Constraint, Token},
 };
 
@@ -16,7 +16,7 @@ pub fn create_table(db: &Db, name: Token, col_decls: Vec<ColDecl>) -> Result<Fra
                 Constraint::PrimaryKey => {}
                 Constraint::ForeignKey => unimplemented!(),
                 Constraint::Check(_) => unimplemented!(),
-                Constraint::Default(_) => unimplemented!(),
+                Constraint::Default(_) => {}
                 Constraint::CreateIndex => unimplemented!(),
             }
         }
@@ -27,6 +27,7 @@ pub fn create_table(db: &Db, name: Token, col_decls: Vec<ColDecl>) -> Result<Fra
                 .primary_key(col_decl.constraints().contains(&Constraint::PrimaryKey))
                 .unique(col_decl.constraints().contains(&Constraint::Unique))
                 .not_null(col_decl.constraints().contains(&Constraint::NotNull))
+                .def(extract_default(col_decl.constraints()))
                 .build()?,
         );
     }
@@ -40,4 +41,23 @@ pub fn create_table(db: &Db, name: Token, col_decls: Vec<ColDecl>) -> Result<Fra
         table,
     );
     Ok(Frame::Null)
+}
+
+fn extract_default(constraints: &[Constraint]) -> DefaultOpt {
+    constraints
+        .into_iter()
+        .find(|constraint| match constraint {
+            Constraint::Default(_) => true,
+            _ => false,
+        })
+        .map(|constraint| {
+            if let Constraint::Default(lit) = constraint {
+                // TODO: will it ever be `DefaultOpt::Increment(_)`?
+                // also stuff like `GETDATE()`
+                DefaultOpt::Some(lit.clone())
+            } else {
+                unreachable!()
+            }
+        })
+        .unwrap_or(DefaultOpt::None)
 }
