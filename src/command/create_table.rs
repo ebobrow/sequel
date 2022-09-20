@@ -45,18 +45,14 @@ pub fn create_table(db: &Db, name: Token, col_decls: Vec<ColDecl>) -> Result<Fra
 
 fn extract_default(constraints: &[Constraint]) -> DefaultOpt {
     constraints
-        .into_iter()
-        .find(|constraint| match constraint {
-            Constraint::Default(_) => true,
-            _ => false,
-        })
-        .map(|constraint| {
+        .iter()
+        .find_map(|constraint| {
             if let Constraint::Default(lit) = constraint {
                 // TODO: will it ever be `DefaultOpt::Increment(_)`?
                 // also stuff like `GETDATE()`
-                DefaultOpt::Some(lit.clone())
+                Some(DefaultOpt::Some(lit.clone()))
             } else {
-                unreachable!()
+                None
             }
         })
         .unwrap_or(DefaultOpt::None)

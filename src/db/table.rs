@@ -66,14 +66,13 @@ impl Table {
             }
 
             // Check unique
-            if header.unique() {
-                if self
+            if header.unique()
+                && self
                     .rows()
                     .iter()
                     .any(|row| row.cols(&[header.name().to_string()]).unwrap()[0] == col.data())
-                {
-                    bail!("Col {} must be unique", header.name());
-                }
+            {
+                bail!("Col {} must be unique", header.name());
             }
 
             // Check type
