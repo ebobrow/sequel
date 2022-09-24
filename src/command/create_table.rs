@@ -3,7 +3,7 @@ use anyhow::{anyhow, Result};
 use crate::{
     connection::Frame,
     db::{ColumnHeader, Db, DefaultOpt, Table},
-    parse::{ColDecl, Constraint, Token},
+    parse::{ColDecl, Constraint, Expr, Token},
 };
 
 pub fn create_table(db: &Db, name: Token, col_decls: Vec<ColDecl>) -> Result<Frame> {
@@ -28,6 +28,7 @@ pub fn create_table(db: &Db, name: Token, col_decls: Vec<ColDecl>) -> Result<Fra
                 .unique(col_decl.constraints().contains(&Constraint::Unique))
                 .not_null(col_decl.constraints().contains(&Constraint::NotNull))
                 .def(extract_default(col_decl.constraints()))
+                .check(extract_check(col_decl.constraints()))
                 .build()?,
         );
     }
@@ -56,4 +57,14 @@ fn extract_default(constraints: &[Constraint]) -> DefaultOpt {
             }
         })
         .unwrap_or(DefaultOpt::None)
+}
+
+fn extract_check(constraints: &[Constraint]) -> Option<Expr> {
+    constraints.iter().find_map(|constraint| {
+        if let Constraint::Check(expr) = constraint {
+            Some(expr.clone())
+        } else {
+            None
+        }
+    })
 }

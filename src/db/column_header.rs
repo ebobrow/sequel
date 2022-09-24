@@ -1,6 +1,9 @@
 use anyhow::{anyhow, Result};
 
-use crate::{parse::LiteralValue, Ty};
+use crate::{
+    parse::{Expr, LiteralValue},
+    Ty,
+};
 
 #[derive(Clone, PartialEq)]
 pub enum DefaultOpt {
@@ -17,6 +20,7 @@ pub struct ColumnHeaderBuilder {
     not_null: bool,
     unique: bool,
     default: DefaultOpt,
+    check: Option<Expr>,
     ty: Option<Ty>,
 }
 
@@ -29,6 +33,7 @@ impl ColumnHeaderBuilder {
             not_null: false,
             unique: false,
             default: DefaultOpt::None,
+            check: None,
             ty: None,
         }
     }
@@ -55,6 +60,11 @@ impl ColumnHeaderBuilder {
 
     pub fn def(mut self, def: DefaultOpt) -> Self {
         self.default = def;
+        self
+    }
+
+    pub fn check(mut self, check: Option<Expr>) -> Self {
+        self.check = check;
         self
     }
 
@@ -85,6 +95,11 @@ impl ColumnHeaderBuilder {
                             return Err(print_err("Number"));
                         }
                     }
+                    LiteralValue::Bool(_) => {
+                        if ty != Ty::Bool {
+                            return Err(print_err("Number"));
+                        }
+                    }
                 },
                 DefaultOpt::Incrementing(_) => {
                     if ty != Ty::Number {
@@ -99,6 +114,7 @@ impl ColumnHeaderBuilder {
                 default: self.default,
                 not_null: self.not_null,
                 unique: self.unique,
+                check: self.check,
                 ty,
             })
         } else {
@@ -115,6 +131,7 @@ pub struct ColumnHeader {
     not_null: bool,
     unique: bool,
     default: DefaultOpt,
+    check: Option<Expr>,
     ty: Ty,
 }
 
@@ -131,6 +148,7 @@ impl ColumnHeader {
             not_null: true,
             unique: true,
             default: DefaultOpt::Incrementing(0),
+            check: None,
             ty: Ty::Number,
         }
     }
@@ -170,5 +188,9 @@ impl ColumnHeader {
 
     pub fn unique(&self) -> bool {
         self.unique
+    }
+
+    pub fn check(&self) -> Option<&Expr> {
+        self.check.as_ref()
     }
 }

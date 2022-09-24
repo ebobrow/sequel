@@ -1,5 +1,7 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use bytes::Bytes;
+
+use crate::db::Column;
 
 use super::token::Token;
 
@@ -20,7 +22,7 @@ pub enum Command {
     },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Binary {
         left: Token,
@@ -29,17 +31,38 @@ pub enum Expr {
     },
 }
 
+impl Expr {
+    pub fn eval(&self, env: Vec<Column>) -> Result<LiteralValue> {
+        match self {
+            Expr::Binary { left, op, right } => {
+                // don't collapse
+                Ok(LiteralValue::Bool(match op {
+                    // TODO: Not always numvwr!!!!!11!!!11!!1!!1!1
+                    Token::GreaterThan => left.number()? > right.number()?,
+                    Token::GreaterEqual => left.number()? >= right.number()?,
+                    Token::Equal => left == right,
+                    Token::LessThan => left.number()? < right.number()?,
+                    Token::LessEqual => left.number()? <= right.number()?,
+                    _ => unreachable!(),
+                }))
+            }
+        }
+    }
+}
+
 // TODO: real `Ty`s (varchar, etc.)
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Ty {
     String,
     Number,
+    Bool,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum LiteralValue {
     String(String),
     Number(f64),
+    Bool(bool),
 }
 
 impl From<&LiteralValue> for Bytes {
@@ -47,6 +70,13 @@ impl From<&LiteralValue> for Bytes {
         match val {
             LiteralValue::String(s) => Bytes::copy_from_slice(s[..].as_bytes()),
             LiteralValue::Number(n) => Bytes::from(n.to_string()),
+            LiteralValue::Bool(b) => {
+                if *b {
+                    Bytes::from("true")
+                } else {
+                    Bytes::from("false")
+                }
+            }
         }
     }
 }

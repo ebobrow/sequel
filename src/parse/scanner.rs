@@ -24,6 +24,8 @@ static KEYWORDS: phf::Map<&'static [u8], Token> = phf_map! {
     b"INDEX" => Token::Index,
     b"AND" => Token::And,
     b"OR" => Token::Or,
+    b"true" => Token::Bool(true),
+    b"false" => Token::Bool(false),
 };
 
 pub struct Scanner {

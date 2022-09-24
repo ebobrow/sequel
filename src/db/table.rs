@@ -88,6 +88,16 @@ impl Table {
                     },
                     Err(e) => return Err(e.into()),
                 },
+                Ty::Bool => match std::str::from_utf8(col.data()) {
+                    Ok("true") | Ok("false") => {}
+                    Ok(other) => bail!("Invalid boolean value: {}", other),
+                    Err(e) => return Err(e.into()),
+                },
+            }
+
+            // `CHECK` condition
+            if let Some(expr) = header.check() {
+                todo!()
             }
         }
         let (primary_col, cols): (Vec<_>, Vec<_>) = cols

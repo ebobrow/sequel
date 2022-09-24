@@ -5,7 +5,7 @@ use parser::Parser;
 use scanner::Scanner;
 
 pub use self::{
-    ast::{ColDecl, Command, Constraint, Key, LiteralValue, Tokens, Ty},
+    ast::{ColDecl, Command, Constraint, Expr, Key, LiteralValue, Tokens, Ty},
     token::Token,
 };
 
