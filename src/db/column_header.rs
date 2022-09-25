@@ -100,6 +100,7 @@ impl ColumnHeaderBuilder {
                             return Err(print_err("Number"));
                         }
                     }
+                    LiteralValue::Null => unreachable!(),
                 },
                 DefaultOpt::Incrementing(_) => {
                     if ty != Ty::Number {

@@ -1,9 +1,9 @@
+use ordered_float::OrderedFloat;
 use std::collections::BTreeSet;
 
 use anyhow::{anyhow, bail};
-use bytes::Bytes;
 
-use crate::Ty;
+use crate::{parse::LiteralValue, Ty};
 
 use super::{row::Row, Column, ColumnHeader};
 
@@ -58,7 +58,7 @@ impl Table {
                 .ok_or_else(|| anyhow!("Column {} not found", col.name()))?;
 
             // Check null
-            if col.data().is_empty() {
+            if let LiteralValue::Null = col.data() {
                 if header.not_null() {
                     bail!("Column {} non-nullable", header.name());
                 }
@@ -70,34 +70,40 @@ impl Table {
                 && self
                     .rows()
                     .iter()
-                    .any(|row| row.cols(&[header.name().to_string()]).unwrap()[0] == col.data())
+                    .any(|row| row.cols(&[header.name().to_string()]).unwrap()[0] == *col.data())
             {
                 bail!("Col {} must be unique", header.name());
             }
 
             // Check type
             match header.ty() {
-                Ty::String => match String::from_utf8(col.data().to_vec()) {
-                    Ok(_) => {}
-                    Err(e) => return Err(e.into()),
-                },
-                Ty::Number => match std::str::from_utf8(col.data()) {
-                    Ok(s) => match s.parse::<f64>() {
-                        Ok(_) => {}
-                        Err(e) => return Err(e.into()),
-                    },
-                    Err(e) => return Err(e.into()),
-                },
-                Ty::Bool => match std::str::from_utf8(col.data()) {
-                    Ok("true") | Ok("false") => {}
-                    Ok(other) => bail!("Invalid boolean value: {}", other),
-                    Err(e) => return Err(e.into()),
-                },
+                Ty::String => {
+                    if !matches!(col.data(), LiteralValue::String(_)) {
+                        bail!("Expected string")
+                    }
+                }
+                Ty::Number => {
+                    if !matches!(col.data(), LiteralValue::Number(_)) {
+                        bail!("Expected number")
+                    }
+                }
+                Ty::Bool => {
+                    if !matches!(col.data(), LiteralValue::Bool(_)) {
+                        bail!("Expected bool")
+                    }
+                }
             }
 
             // `CHECK` condition
             if let Some(expr) = header.check() {
-                todo!()
+                match expr.eval(&cols)? {
+                    LiteralValue::Bool(b) => {
+                        if !b {
+                            bail!("Check condition on {} failed", header.name())
+                        }
+                    }
+                    _ => unreachable!(),
+                }
             }
         }
         let (primary_col, cols): (Vec<_>, Vec<_>) = cols
@@ -105,14 +111,10 @@ impl Table {
             .partition(|col| col.name() == self.primary_key().name());
         match &primary_col[..] {
             [] => {
-                let val = Bytes::from(
-                    self.primary_key_mut()
-                        .inc()
-                        .ok_or_else(|| {
-                            anyhow!("Must specify primary key if it doesn't have default")
-                        })?
-                        .to_string(),
-                );
+                let val =
+                    LiteralValue::Number(OrderedFloat(self.primary_key_mut().inc().ok_or_else(
+                        || anyhow!("Must specify primary key if it doesn't have default"),
+                    )? as f64));
                 self.rows
                     .insert(Row::new(Column::new(val, "ID".into()), cols));
             }

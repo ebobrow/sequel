@@ -1,4 +1,4 @@
-use bytes::Bytes;
+use crate::parse::LiteralValue;
 
 #[derive(Eq, Debug)]
 pub struct Row {
@@ -14,7 +14,7 @@ impl Row {
         }
     }
 
-    pub fn cols(&self, names: &[String]) -> Option<Vec<Bytes>> {
+    pub fn cols(&self, names: &[String]) -> Option<Vec<LiteralValue>> {
         let mut cols = Vec::new();
         let all_col_names = self
             .cols
@@ -48,17 +48,16 @@ impl Ord for Row {
 
 #[derive(Eq, Clone, Debug)]
 pub struct Column {
-    // TODO: Should this be `LiteralValue`? (doens't implement `Eq`)
-    data: Bytes,
+    data: LiteralValue,
     name: String, // Should correspond with name in `ColumnHeader`
 }
 
 impl Column {
-    pub fn new(data: Bytes, name: String) -> Column {
+    pub fn new(data: LiteralValue, name: String) -> Column {
         Column { data, name }
     }
 
-    pub fn data(&self) -> &Bytes {
+    pub fn data(&self) -> &LiteralValue {
         &self.data
     }
 

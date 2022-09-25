@@ -218,7 +218,7 @@ impl Parser {
     fn literal(&mut self) -> Result<LiteralValue> {
         let tok = self.advance()?;
         match tok {
-            Token::Number(n) => Ok(LiteralValue::Number(*n)),
+            Token::Number(n) => Ok(LiteralValue::Number(ordered_float::OrderedFloat(*n))),
             Token::String(s) => Ok(LiteralValue::String(s.clone())),
             _ => throw_unexpected(tok, vec![Token::Number(0.0), Token::String(String::new())]),
         }

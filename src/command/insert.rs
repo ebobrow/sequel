@@ -1,7 +1,7 @@
+use ordered_float::OrderedFloat;
 use std::cmp::Ordering;
 
 use anyhow::{anyhow, Result};
-use bytes::Bytes;
 
 use crate::{
     connection::Frame,
@@ -29,7 +29,7 @@ pub fn insert(db: &Db, table: Token, cols: Tokens, rows: Vec<Vec<LiteralValue>>)
             for values in rows {
                 let mut columns = Vec::new();
                 for (name, val) in specified_col_names.iter().zip(values.iter()) {
-                    columns.push(Column::new(val.into(), name.to_string()));
+                    columns.push(Column::new(val.clone(), name.to_string()));
                 }
                 match columns.len().cmp(&specified_cols.len()) {
                     Ordering::Less => {
@@ -67,7 +67,7 @@ pub fn insert(db: &Db, table: Token, cols: Tokens, rows: Vec<Vec<LiteralValue>>)
             for values in rows {
                 let mut columns = Vec::new();
                 for (c, val) in table.col_headers().iter().zip(values.iter()) {
-                    columns.push(Column::new(val.into(), c.name().to_string()));
+                    columns.push(Column::new(val.clone(), c.name().to_string()));
                 }
                 match columns.len().cmp(&table.visible_keys().count()) {
                     Ordering::Less => {
@@ -89,14 +89,11 @@ pub fn insert(db: &Db, table: Token, cols: Tokens, rows: Vec<Vec<LiteralValue>>)
 
 fn get_default(header: &mut ColumnHeader) -> Result<Column> {
     let val = match header.default() {
-        DefaultOpt::None => Bytes::new(),
-        DefaultOpt::Some(val) => val.into(),
-        DefaultOpt::Incrementing(_) => Bytes::from(
-            header
-                .inc()
-                .ok_or_else(|| anyhow!("Internal error"))?
-                .to_string(),
-        ),
+        DefaultOpt::None => LiteralValue::Null,
+        DefaultOpt::Some(val) => val.clone(),
+        DefaultOpt::Incrementing(_) => LiteralValue::Number(OrderedFloat(
+            header.inc().ok_or_else(|| anyhow!("Internal error"))? as f64,
+        )),
     };
     Ok(Column::new(val, header.name().to_string()))
 }

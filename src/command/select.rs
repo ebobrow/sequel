@@ -4,7 +4,7 @@ use bytes::Bytes;
 use crate::{
     connection::Frame,
     db::Db,
-    parse::{Key, Token},
+    parse::{Key, LiteralValue, Token},
 };
 
 use super::on_table;
@@ -15,7 +15,7 @@ pub fn select(db: &Db, key: Key, table: Token) -> Result<Frame> {
             let headers: Vec<_> = table
                 .col_headers()
                 .iter()
-                .map(|header| Bytes::copy_from_slice(header.name().as_bytes()))
+                .map(|header| LiteralValue::String(header.name().into()))
                 .collect();
             let header_names: Vec<_> = table
                 .col_headers()
@@ -29,7 +29,12 @@ pub fn select(db: &Db, key: Key, table: Token) -> Result<Frame> {
                 .collect::<Option<Vec<_>>>()
                 .ok_or_else(|| anyhow!("Unknown column names"))?;
             contents.insert(0, headers);
-            Ok(Frame::Table(contents))
+            Ok(Frame::Table(
+                contents
+                    .into_iter()
+                    .map(|row| row.iter().map(Bytes::from).collect())
+                    .collect(),
+            ))
         }
         Key::List(cols) => {
             let names = cols
@@ -47,8 +52,13 @@ pub fn select(db: &Db, key: Key, table: Token) -> Result<Frame> {
                 .map(|row| row.cols(&names[..]))
                 .collect::<Option<Vec<_>>>()
                 .ok_or_else(|| anyhow!("Unknown column names"))?;
-            contents.insert(0, names.into_iter().map(Bytes::from).collect());
-            Ok(Frame::Table(contents))
+            contents.insert(0, names.into_iter().map(LiteralValue::String).collect());
+            Ok(Frame::Table(
+                contents
+                    .into_iter()
+                    .map(|row| row.iter().map(Bytes::from).collect())
+                    .collect(),
+            ))
         }
     })
 }

@@ -1,5 +1,6 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Ok, Result};
 use bytes::Bytes;
+use ordered_float::OrderedFloat;
 
 use crate::db::Column;
 
@@ -32,12 +33,29 @@ pub enum Expr {
 }
 
 impl Expr {
-    pub fn eval(&self, env: Vec<Column>) -> Result<LiteralValue> {
+    pub fn eval(&self, env: &[Column]) -> Result<LiteralValue> {
         match self {
             Expr::Binary { left, op, right } => {
                 // don't collapse
+                let extract_value = |tok: &Token| -> Result<LiteralValue> {
+                    match tok {
+                        Token::Identifier(ident) => {
+                            Ok(env
+                                .iter()
+                                .find(|item| item.name() == ident)
+                                // TODO: check this when first creating table?
+                                .ok_or_else(|| anyhow!("Invalid identifier in check condition"))?
+                                .data()
+                                .clone())
+                        }
+                        Token::String(s) => Ok(LiteralValue::String(s.into())),
+                        Token::Number(n) => Ok(LiteralValue::Number(OrderedFloat(*n))),
+                        _ => bail!("expected identifier or literal value"),
+                    }
+                };
+                let left = extract_value(left)?;
+                let right = extract_value(right)?;
                 Ok(LiteralValue::Bool(match op {
-                    // TODO: Not always numvwr!!!!!11!!!11!!1!!1!1
                     Token::GreaterThan => left.number()? > right.number()?,
                     Token::GreaterEqual => left.number()? >= right.number()?,
                     Token::Equal => left == right,
@@ -58,11 +76,12 @@ pub enum Ty {
     Bool,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum LiteralValue {
     String(String),
-    Number(f64),
+    Number(OrderedFloat<f64>),
     Bool(bool),
+    Null,
 }
 
 impl From<&LiteralValue> for Bytes {
@@ -77,6 +96,17 @@ impl From<&LiteralValue> for Bytes {
                     Bytes::from("false")
                 }
             }
+            LiteralValue::Null => Bytes::new(),
+        }
+    }
+}
+
+impl LiteralValue {
+    fn number(&self) -> Result<OrderedFloat<f64>> {
+        if let LiteralValue::Number(n) = self {
+            Ok(*n)
+        } else {
+            bail!("Expected number")
         }
     }
 }

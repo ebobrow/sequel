@@ -50,6 +50,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use ordered_float::OrderedFloat;
     use std::{
         collections::HashMap,
         fmt::Debug,
@@ -95,7 +96,7 @@ mod tests {
             ]),
             vec![vec![
                 LiteralValue::String("Joe".into()),
-                LiteralValue::Number(60.0),
+                LiteralValue::Number(OrderedFloat(60.0)),
             ]],
         )
         .is_ok());
@@ -105,7 +106,7 @@ mod tests {
             Tokens::Omitted,
             vec![vec![
                 LiteralValue::String("Fredward".into()),
-                LiteralValue::Number(999.0),
+                LiteralValue::Number(OrderedFloat(999.0)),
             ]],
         )
         .is_ok());
@@ -145,10 +146,10 @@ mod tests {
                 Token::Identifier("people".into()),
                 Tokens::Omitted,
                 vec![vec![
-                    LiteralValue::Number(1.0),
-                    LiteralValue::Number(2.0),
-                    LiteralValue::Number(3.0),
-                    LiteralValue::Number(4.0),
+                    LiteralValue::Number(OrderedFloat(1.0)),
+                    LiteralValue::Number(OrderedFloat(2.0)),
+                    LiteralValue::Number(OrderedFloat(3.0)),
+                    LiteralValue::Number(OrderedFloat(4.0)),
                 ]],
             ),
             "too many values supplied",
@@ -161,7 +162,7 @@ mod tests {
             "table".into(),
             Table::try_from(vec![
                 ColumnHeader::new("three".into())
-                    .def(DefaultOpt::Some(LiteralValue::Number(3.0)))
+                    .def(DefaultOpt::Some(LiteralValue::Number(OrderedFloat(3.0))))
                     .ty(Ty::Number)
                     .build()
                     .unwrap(),
@@ -184,7 +185,7 @@ mod tests {
             &db,
             Token::Identifier("table".into()),
             Tokens::List(vec![Token::Identifier("three".into())]),
-            vec![vec![LiteralValue::Number(4.0)]]
+            vec![vec![LiteralValue::Number(OrderedFloat(4.0))]]
         )
         .is_ok());
 
@@ -237,8 +238,8 @@ mod tests {
         .unwrap();
         table
             .append(vec![
-                Column::new("Elliot".into(), "name".into()),
-                Column::new("16".into(), "age".into()),
+                Column::new(LiteralValue::String("Elliot".into()), "name".into()),
+                Column::new(LiteralValue::Number(OrderedFloat(16.0)), "age".into()),
             ])
             .unwrap();
         Arc::new(Mutex::new(HashMap::from([("people".into(), table)])))
