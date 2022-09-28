@@ -1,31 +1,9 @@
 use anyhow::{anyhow, bail, Result};
 use bytes::Bytes;
-use phf::phf_map;
 
-use super::{error::ERROR_EOF, token::Token};
-
-// TODO: automate with macro or some such
-static KEYWORDS: phf::Map<&'static [u8], Token> = phf_map! {
-    b"INSERT" => Token::Insert,
-    b"SELECT" => Token::Select,
-    b"FROM" => Token::From,
-    b"INTO" => Token::Into,
-    b"VALUES" => Token::Values,
-    b"CREATE" => Token::Create,
-    b"TABLE" => Token::Table,
-    b"NOT" => Token::Not,
-    b"NULL" => Token::Null,
-    b"UNIQUE" => Token::Unique,
-    b"PRIMARY" => Token::Primary,
-    b"FOREIGN" => Token::Foreign,
-    b"KEY" => Token::Key,
-    b"CHECK" => Token::Check,
-    b"DEFAULT" => Token::Default,
-    b"INDEX" => Token::Index,
-    b"AND" => Token::And,
-    b"OR" => Token::Or,
-    b"true" => Token::Bool(true),
-    b"false" => Token::Bool(false),
+use super::{
+    error::ERROR_EOF,
+    token::{Keyword, Token},
 };
 
 pub struct Scanner {
@@ -158,8 +136,8 @@ impl Scanner {
         }
 
         let text = &self.source[self.start..self.current];
-        let ty = if let Some(ty) = KEYWORDS.get(text) {
-            ty.clone()
+        let ty = if let Some(ty) = Keyword::get(text) {
+            ty
         } else {
             Token::Identifier(String::from_utf8(text.to_vec())?)
         };

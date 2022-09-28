@@ -152,7 +152,6 @@ impl ColDecl {
     }
 }
 
-// TODO: default and check need params (parse accordingly)
 #[derive(Debug, PartialEq)]
 pub enum Constraint {
     NotNull,

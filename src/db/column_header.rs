@@ -5,7 +5,7 @@ use crate::{
     Ty,
 };
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum DefaultOpt {
     None,
     Some(LiteralValue),

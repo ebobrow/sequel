@@ -40,7 +40,7 @@ mod tests {
 
     #[test]
     fn scanner() {
-        let stream = "INSERT 17.6 * (\"one\", \"two\") table".into();
+        let stream = "INSERT 17.6 * (\"one\", \"two\", true) table".into();
         let tokens = Scanner::scan(stream).unwrap();
         assert_eq!(
             tokens,
@@ -52,6 +52,8 @@ mod tests {
                 Token::String("one".to_string()),
                 Token::Comma,
                 Token::String("two".to_string()),
+                Token::Comma,
+                Token::Bool(true),
                 Token::RightParen,
                 Token::Identifier(String::from("table")),
                 Token::EOF,
