@@ -31,6 +31,8 @@ pub enum Token {
     Create,
     #[keyword]
     Table,
+    #[keyword]
+    As,
 
     #[keyword]
     Not,

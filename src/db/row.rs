@@ -14,6 +14,14 @@ impl Row {
         }
     }
 
+    pub fn all_cols(&self) -> Vec<Column> {
+        self.cols
+            .clone()
+            .into_iter()
+            .chain([self.primary_key_col.clone()])
+            .collect()
+    }
+
     pub fn cols(&self, names: &[String]) -> Option<Vec<LiteralValue>> {
         let mut cols = Vec::new();
         let all_col_names = self

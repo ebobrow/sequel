@@ -18,7 +18,7 @@ pub fn run_cmd(db: &Db, stream: Bytes) -> Frame {
     let res = match parse::parse(stream) {
         Ok(Command::Select { key, table }) => select(db, key, table),
         Ok(Command::Insert { table, cols, rows }) => insert(db, table, cols, rows),
-        Ok(Command::CreateTable { name, col_decls }) => create_table(db, name, col_decls),
+        Ok(Command::CreateTable { name, def }) => create_table(db, name, def),
         Err(e) => return Frame::Error(format!("{:?}", e)),
     };
     res.unwrap_or_else(|e| Frame::Error(format!("{:?}", e)))
@@ -59,7 +59,7 @@ mod tests {
 
     use crate::{
         db::{Column, ColumnHeader, DefaultOpt, Table},
-        parse::{ColDecl, Key, LiteralValue, Token, Tokens, Ty},
+        parse::{ColDecl, Key, LiteralValue, TableDef, Token, Tokens, Ty},
     };
 
     use super::*;
@@ -212,14 +212,25 @@ mod tests {
         assert!(create_table(
             &db,
             Token::Identifier("people".to_string()),
-            vec![
+            TableDef::Cols(vec![
                 ColDecl::new(
                     Token::Identifier("name".to_string()),
                     Ty::String,
                     Vec::new()
                 ),
                 ColDecl::new(Token::Identifier("age".to_string()), Ty::Number, Vec::new())
-            ]
+            ])
+        )
+        .is_ok());
+
+        // TODO: sufficient test or actually look at result?
+        assert!(create_table(
+            &db,
+            Token::Identifier("names".to_string()),
+            TableDef::As(Box::new(Command::Select {
+                key: Key::List(vec![Token::Identifier("name".to_string())]),
+                table: Token::Identifier("people".to_string())
+            }))
         )
         .is_ok());
     }

@@ -5,7 +5,7 @@ use parser::Parser;
 use scanner::Scanner;
 
 pub use self::{
-    ast::{ColDecl, Command, Constraint, Expr, Key, LiteralValue, Tokens, Ty},
+    ast::{ColDecl, Command, Constraint, Expr, Key, LiteralValue, TableDef, Tokens, Ty},
     token::Token,
 };
 
@@ -26,7 +26,7 @@ mod tests {
     use anyhow::Result;
 
     use crate::parse::{
-        ast::{Constraint, Expr},
+        ast::{Constraint, Expr, TableDef},
         ColDecl,
     };
 
@@ -151,7 +151,7 @@ mod tests {
             expr,
             Command::CreateTable {
                 name: Token::Identifier(String::from("people")),
-                col_decls: vec![
+                def: TableDef::Cols(vec![
                     ColDecl::new(
                         Token::Identifier(String::from("ID")),
                         Ty::Number,
@@ -179,7 +179,34 @@ mod tests {
                             })
                         ]
                     ),
-                ]
+                ])
+            }
+        );
+
+        let tokens = vec![
+            Token::Create,
+            Token::Table,
+            Token::Identifier(String::from("names")),
+            Token::As,
+            Token::Select,
+            Token::Identifier(String::from("FirstName")),
+            Token::Comma,
+            Token::Identifier(String::from("LastName")),
+            Token::From,
+            Token::Identifier(String::from("people")),
+        ];
+        let expr = Parser::new(tokens).parse().unwrap();
+        assert_eq!(
+            expr,
+            Command::CreateTable {
+                name: Token::Identifier(String::from("names")),
+                def: TableDef::As(Box::new(Command::Select {
+                    key: Key::List(vec![
+                        Token::Identifier(String::from("FirstName")),
+                        Token::Identifier(String::from("LastName"))
+                    ]),
+                    table: Token::Identifier(String::from("people"))
+                }))
             }
         );
     }

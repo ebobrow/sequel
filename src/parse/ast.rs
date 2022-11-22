@@ -19,7 +19,7 @@ pub enum Command {
     },
     CreateTable {
         name: Token,
-        col_decls: Vec<ColDecl>,
+        def: TableDef,
     },
 }
 
@@ -36,7 +36,6 @@ impl Expr {
     pub fn eval(&self, env: &[Column]) -> Result<LiteralValue> {
         match self {
             Expr::Binary { left, op, right } => {
-                // don't collapse
                 let extract_value = |tok: &Token| -> Result<LiteralValue> {
                     match tok {
                         Token::Identifier(ident) => {
@@ -121,6 +120,14 @@ pub enum Key {
 pub enum Tokens {
     Omitted,
     List(Vec<Token>),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum TableDef {
+    Cols(Vec<ColDecl>),
+
+    /// SELECT bar, baz FROM foo
+    As(Box<Command>),
 }
 
 #[derive(Debug, PartialEq)]

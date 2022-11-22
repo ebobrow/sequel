@@ -6,6 +6,7 @@ use super::{
     ast::{ColDecl, Command, Constraint, Expr, Key, LiteralValue, Tokens},
     error::throw_unexpected,
     token::Token,
+    TableDef,
 };
 
 pub struct Parser {
@@ -51,8 +52,25 @@ impl Parser {
     fn create_table(&mut self) -> Result<Command> {
         self.consume(&Token::Table)?;
         let name = self.consume_ident()?.clone();
-        let col_decls = self.col_decls()?;
-        Ok(Command::CreateTable { name, col_decls })
+        match self.peek()? {
+            Token::LeftParen => {
+                let col_decls = self.col_decls()?;
+                Ok(Command::CreateTable {
+                    name,
+                    def: TableDef::Cols(col_decls),
+                })
+            }
+            Token::As => {
+                self.consume(&Token::As)?;
+                self.consume(&Token::Select)?;
+                let cmd = self.select()?;
+                Ok(Command::CreateTable {
+                    name,
+                    def: TableDef::As(Box::new(cmd)),
+                })
+            }
+            other => throw_unexpected(other, vec![Token::LeftParen, Token::As]),
+        }
     }
 
     fn col_decls(&mut self) -> Result<Vec<ColDecl>> {

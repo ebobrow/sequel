@@ -1,12 +1,19 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Ok, Result};
 
 use crate::{
     connection::Frame,
     db::{ColumnHeader, Db, DefaultOpt, Table},
-    parse::{ColDecl, Constraint, Expr, Token},
+    parse::{ColDecl, Command, Constraint, Expr, Key, TableDef, Token},
 };
 
-pub fn create_table(db: &Db, name: Token, col_decls: Vec<ColDecl>) -> Result<Frame> {
+pub fn create_table(db: &Db, name: Token, def: TableDef) -> Result<Frame> {
+    match def {
+        TableDef::Cols(col_decls) => from_col_decls(db, name, col_decls),
+        TableDef::As(cmd) => from_other(db, name, *cmd),
+    }
+}
+
+fn from_col_decls(db: &Db, name: Token, col_decls: Vec<ColDecl>) -> Result<Frame> {
     let mut col_headers = Vec::new();
     for col_decl in col_decls {
         for constraint in col_decl.constraints() {
@@ -20,7 +27,6 @@ pub fn create_table(db: &Db, name: Token, col_decls: Vec<ColDecl>) -> Result<Fra
                 Constraint::CreateIndex => unimplemented!(),
             }
         }
-        // TODO: CREATE TABLE foo AS SELECT bar, baz FROM other
         col_headers.push(
             ColumnHeader::new(col_decl.ident()?.to_string())
                 .ty(col_decl.ty().clone())
@@ -42,6 +48,68 @@ pub fn create_table(db: &Db, name: Token, col_decls: Vec<ColDecl>) -> Result<Fra
         table,
     );
     Ok(Frame::Null)
+}
+
+fn from_other(db: &Db, name: Token, command: Command) -> Result<Frame> {
+    if let Command::Select { key, table } = command {
+        let mut db = db.lock().unwrap();
+        let table_name = table.ident().ok_or_else(|| anyhow!("Internal error"))?;
+        let table = db
+            .get(table_name)
+            .ok_or_else(|| anyhow!("Table \"{}\" not found", table_name))?;
+        let headers = match &key {
+            Key::Glob => table.col_headers().to_vec(),
+            Key::List(names) => {
+                let names = names
+                    .iter()
+                    .map(|col| {
+                        Ok(col
+                            .ident()
+                            .ok_or_else(|| anyhow!("Internal error"))?
+                            .to_string())
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                table
+                    .col_headers()
+                    .iter()
+                    .filter(|header| names.contains(&header.name().to_owned()))
+                    .cloned()
+                    .collect()
+            }
+        };
+        let mut new_table = Table::try_from(headers)?;
+        for row in table.rows() {
+            let cols = match &key {
+                Key::Glob => row.all_cols(),
+                Key::List(names) => {
+                    let names = names
+                        .iter()
+                        .map(|col| {
+                            Ok(col
+                                .ident()
+                                .ok_or_else(|| anyhow!("Internal error"))?
+                                .to_string())
+                        })
+                        .collect::<Result<Vec<_>>>()?;
+                    row.all_cols()
+                        .into_iter()
+                        .filter(|col| names.contains(&col.name().to_owned()))
+                        .collect()
+                }
+            };
+            new_table.append(cols)?;
+        }
+
+        db.insert(
+            name.ident()
+                .ok_or_else(|| anyhow!("Internal error"))?
+                .to_string(),
+            new_table,
+        );
+        Ok(Frame::Null)
+    } else {
+        bail!("expected `SELECT`");
+    }
 }
 
 fn extract_default(constraints: &[Constraint]) -> DefaultOpt {
