@@ -223,7 +223,6 @@ mod tests {
         )
         .is_ok());
 
-        // TODO: sufficient test or actually look at result?
         assert!(create_table(
             &db,
             Token::Identifier("names".to_string()),
@@ -233,6 +232,13 @@ mod tests {
             }))
         )
         .is_ok());
+
+        let db = db.lock().unwrap();
+        let people = db.get("people").unwrap();
+        assert_table_def_equals(people, &[("name", Ty::String), ("age", Ty::Number)]);
+
+        let names = db.get("names").unwrap();
+        assert_table_def_equals(names, &[("name", Ty::String)]);
     }
 
     fn init_db() -> Db {
@@ -270,5 +276,13 @@ mod tests {
             Ok(_) => unreachable!(),
             Err(e) => assert_eq!(e.to_string(), expected),
         }
+    }
+
+    fn assert_table_def_equals(table: &Table, expected: &[(&str, Ty)]) {
+        assert!(table.col_headers().iter().zip(expected).all(
+            |(col_header, (expected_name, expected_ty))| {
+                &col_header.name() == expected_name && col_header.ty() == expected_ty
+            }
+        ))
     }
 }
