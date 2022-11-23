@@ -57,10 +57,10 @@ fn from_other(db: &Db, name: Token, command: Command) -> Result<Frame> {
         let table = db
             .get(table_name)
             .ok_or_else(|| anyhow!("Table \"{}\" not found", table_name))?;
-        let headers = match &key {
-            Key::Glob => table.col_headers().to_vec(),
-            Key::List(names) => {
-                let names = names
+        let names = match &key {
+            Key::Glob => None,
+            Key::List(names) => Some(
+                names
                     .iter()
                     .map(|col| {
                         Ok(col
@@ -68,34 +68,27 @@ fn from_other(db: &Db, name: Token, command: Command) -> Result<Frame> {
                             .ok_or_else(|| anyhow!("Internal error"))?
                             .to_string())
                     })
-                    .collect::<Result<Vec<_>>>()?;
-                table
-                    .col_headers()
-                    .iter()
-                    .filter(|header| names.contains(&header.name().to_owned()))
-                    .cloned()
-                    .collect()
-            }
+                    .collect::<Result<Vec<_>>>()?,
+            ),
+        };
+        let headers = match &names {
+            None => table.col_headers().to_vec(),
+            Some(names) => table
+                .col_headers()
+                .iter()
+                .filter(|header| names.contains(&header.name().to_owned()))
+                .cloned()
+                .collect(),
         };
         let mut new_table = Table::try_from(headers)?;
         for row in table.rows() {
-            let cols = match &key {
-                Key::Glob => row.all_cols(),
-                Key::List(names) => {
-                    let names = names
-                        .iter()
-                        .map(|col| {
-                            Ok(col
-                                .ident()
-                                .ok_or_else(|| anyhow!("Internal error"))?
-                                .to_string())
-                        })
-                        .collect::<Result<Vec<_>>>()?;
-                    row.all_cols()
-                        .into_iter()
-                        .filter(|col| names.contains(&col.name().to_owned()))
-                        .collect()
-                }
+            let cols = match &names {
+                None => row.all_cols(),
+                Some(names) => row
+                    .all_cols()
+                    .into_iter()
+                    .filter(|col| names.contains(&col.name().to_owned()))
+                    .collect(),
             };
             new_table.append(cols)?;
         }
