@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use anyhow::Result;
 use futures::{select, FutureExt};
-use rustyline::{Config, EditMode, Editor};
+use rustyline::{history::DefaultHistory, Config, EditMode, Editor};
 use sequel::connection::Frame;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
     // TODO: this is pretty bad
     let (tx2, mut rx2) = watch::channel(false);
     tokio::spawn(async move {
-        let mut rl = Editor::<()>::with_config(
+        let mut rl = Editor::<(), DefaultHistory>::with_config(
             Config::builder()
                 .auto_add_history(true)
                 .edit_mode(EditMode::Emacs)
