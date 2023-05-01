@@ -15,7 +15,7 @@ path = "src/bin/server.rs"
 tokio = { version = "1", features = ["full"] }
 bytes = "1"
 futures = "0.3"
-anyhow = "1.0.70"
+anyhow = "1.0.71"
 rustyline = "11.0.0"
 ordered-float = "3.7.0"
 macros = { path = "./macros" }
